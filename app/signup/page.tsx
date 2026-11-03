@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Mail, ShoppingBag, UserRound } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +30,8 @@ export default function SignupPage() {
       });
       if (authError) throw authError;
       if (data.session) {
-        window.location.assign("/dashboard");
+        router.replace("/dashboard");
+        router.refresh();
       } else {
         setSuccess("لینکی پشتڕاستکردنەوە بۆ ئیمەیڵەکەت نێردراوە. تکایە ئیمەیڵەکەت بپشکنە.");
       }
