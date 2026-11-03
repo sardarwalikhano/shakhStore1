@@ -26,4 +26,4 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://vtxntrcsjmnmbnfxhfgz.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-publishable-key
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
