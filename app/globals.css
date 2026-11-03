@@ -248,3 +248,15 @@ img { max-width: 100%; }
 .application-note{grid-column:1/-1;color:var(--color-text-secondary);font-size:.9rem}
 .dashboard-nav-link{display:flex;align-items:center;gap:8px;color:#e5e0dc;padding:10px 12px}
 @media(max-width:640px){.merchant-form{grid-template-columns:1fr}.merchant-intro{align-items:flex-start}.merchant-form-card{padding:18px}.application-row{grid-template-columns:1fr}.application-row .role-badge{justify-self:start}}
+
+.table-wrap{overflow-x:auto;background:#fff;border:1px solid var(--color-border);border-radius:16px}
+.data-table{width:100%;border-collapse:collapse;min-width:640px;text-align:right}
+.data-table th,.data-table td{padding:13px 16px;border-bottom:1px solid var(--color-border);font-size:.9rem;white-space:nowrap}
+.data-table th{background:#fff6ee;color:#63564d;font-weight:800}
+.data-table tr:last-child td{border-bottom:0}
+.status-pill{display:inline-flex;padding:4px 9px;border-radius:99px;background:#fff0e5;color:#985018;font-size:.8rem}
+.plain-field{border:1px solid #e8ddd5;border-radius:13px;padding:12px;background:#fff;color:var(--color-text);width:100%}
+.plain-field:focus,.merchant-field select:focus,.merchant-field textarea:focus{outline:3px solid rgba(243,107,24,.18);border-color:var(--color-primary)}
+.publish-check{display:flex;align-items:center;gap:9px;font-weight:700}
+.publish-check input{width:18px;height:18px;accent-color:var(--color-primary)}
+.dashboard-quick-links{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px}
