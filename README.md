@@ -29,3 +29,14 @@ Shakh Store is a Sorani Kurdish, RTL-first multi-store marketplace built with Ne
 The production branch is \`main\`. Connect this repository to a new Vercel project after the first verified code commit. Configure the same public Supabase URL and publishable key in Vercel for Preview and Production.
 
 Do not add service-role keys or other server secrets to \`NEXT_PUBLIC_*\` variables.
+
+
+## Supabase project and migrations
+
+The application is connected to Supabase project \`vtxntrcsjmnmbnfxhfgz\`. SQL migrations live in \`supabase/migrations\`; deployed Edge Function sources live in \`supabase/functions\`.
+
+- Keep \`NEXT_PUBLIC_SUPABASE_URL\` and \`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY\` in Vercel.
+- Never expose a Supabase secret/service-role key in browser code or a \`NEXT_PUBLIC_*\` variable.
+- Apply migrations in ascending version order to a new environment. Do not replay the M10 migrations against a database where they are already recorded.
+- The customer checkout RPC accepts only cash on delivery. Wallet settlement and commissions remain disabled until their operating rules are confirmed.
+- Checkout is intentionally blocked for addresses without an active delivery zone and a configured non-distance-based fee.

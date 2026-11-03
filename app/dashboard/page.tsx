@@ -38,7 +38,9 @@ export default async function DashboardPage() {
   const merchantRoles = ["restaurant", "supermarket", "produce_vendor", "meat_seafood_vendor"];
   const roleLinks = role && merchantRoles.includes(role)
     ? [{ href: "/dashboard/products", label: "بەرهەمەکان", icon: Boxes }]
-    : [];
+    : role === "customer"
+      ? [{ href: "/dashboard/addresses", label: "ناونیشانەکان", icon: Store }]
+      : [];
 
   return (
     <div className="dashboard-shell">
@@ -71,7 +73,7 @@ export default async function DashboardPage() {
             <section className="dashboard-panel">
               <h3>بەشی کڕیار</h3>
               <p>داواکارییەکانت لە بەشی تایبەتی خۆت دەردەکەون. هەروەها دەتوانیت داواکاری بەشداریکردنی فرۆشگا بنێریت.</p>
-              <div className="dashboard-quick-links"><Link href="/search" className="text-link">گەڕان لە فرۆشگاکان <ArrowUpLeft size={17} /></Link><Link href="/merchant/apply" className="text-link">داواکاری دوکانداری <ArrowUpLeft size={17} /></Link></div>
+              <div className="dashboard-quick-links"><Link href="/search" className="text-link">گەڕان لە فرۆشگاکان <ArrowUpLeft size={17} /></Link><Link href="/cart" className="text-link">سەبەتە <ArrowUpLeft size={17} /></Link><Link href="/dashboard/addresses" className="text-link">ناونیشانەکان <ArrowUpLeft size={17} /></Link><Link href="/merchant/apply" className="text-link">داواکاری دوکانداری <ArrowUpLeft size={17} /></Link></div>
             </section>
           ) : (
             <section className="dashboard-panel">

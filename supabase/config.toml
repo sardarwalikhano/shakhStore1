@@ -1,0 +1,7 @@
+project_id = "vtxntrcsjmnmbnfxhfgz"
+
+[functions.manage-user-role]
+verify_jwt = true
+
+[functions.review-merchant-application]
+verify_jwt = true

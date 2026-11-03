@@ -1290,6 +1290,16 @@ export type Database = {
         }
         Returns: number
       }
+      create_order_v1: {
+        Args: {
+          p_address_id: string
+          p_customer_note?: string
+          p_idempotency_key: string
+          p_items: Json
+          p_payment_method?: string
+        }
+        Returns: Json
+      }
       current_app_role: { Args: never; Returns: string }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
       moderate_merchant_store: {
@@ -1325,6 +1335,10 @@ export type Database = {
           p_store_id: string
         }
         Returns: string
+      }
+      set_default_customer_address_v1: {
+        Args: { p_address_id: string }
+        Returns: undefined
       }
     }
     Enums: {

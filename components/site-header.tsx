@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bell, MapPin, Search, ShoppingBag, UserRound } from "lucide-react";
+import { CartHeaderButton } from "@/components/cart-header-button";
 
 export function SiteHeader() {
   return (
@@ -25,7 +26,7 @@ export function SiteHeader() {
         <nav className="header-actions" aria-label="بەستەرە سەرەکییەکان">
           <Link href="/login" className="icon-link" aria-label="چوونەژوورەوە"><UserRound size={20} /></Link>
           <Link href="/login" className="icon-link" aria-label="ئاگادارکردنەوەکان"><Bell size={20} /></Link>
-          <Link href="/login" className="icon-link cart-link" aria-label="زەمبیل"><ShoppingBag size={20} /></Link>
+          <CartHeaderButton />
           <Link href="/login" className="button header-login">چوونەژوورەوە</Link>
         </nav>
       </div>

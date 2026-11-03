@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Store } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
+import { AddToCartButton } from "@/components/add-to-cart-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
   if (error || !store) notFound();
 
   const { data: products } = await supabase.from("products")
-    .select("id, name, description, price_iqd, unit, stock_quantity, is_available")
+    .select("id, name, description, price_iqd, unit, stock_quantity, status, is_available")
     .eq("store_id", store.id).eq("status", "published").eq("is_available", true)
     .order("name").limit(40);
 
@@ -30,15 +31,25 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           <div className="store-detail-icon"><Store size={38} /></div>
           <div><h1>{store.name}</h1><p>{store.description || "زانیاری زیاتر لەسەر ئەم فرۆشگایە بەردەست دەبێت."}</p><span className="muted">{[store.city, store.district].filter(Boolean).join("، ")}</span></div>
         </section>
-        <div className="section-heading"><div><h2>بەرهەمەکان</h2><p>تەنها بەرهەمە بڵاوکراوە و بەردەستەکان پیشان دەدرێن.</p></div></div>
+        <div className="section-heading"><div><h2>بەرهەمەکان</h2><p>تەنها بەرهەمە بڵاوکراوە و بەردەستەکان پیشان دەدرێن.</p></div><Link href="/cart" className="text-link">بینینی سەبەتە <ArrowRight size={16} /></Link></div>
         {!products || products.length === 0 ? (
           <div className="empty-state"><strong>بەرهەمێکی بڵاوکراوە نییە</strong><span className="muted">ئەم فرۆشگایە هێشتا بەرهەمی بڵاونەکردووەتەوە.</span></div>
         ) : (
           <div className="product-grid">
-            {products.map((product) => (
+            {products.map(product=>(
               <article className="product-card" key={product.id}>
                 <div className="product-art"><Store size={26} /></div>
                 <div><h3>{product.name}</h3><p>{product.description || " "}</p><strong>{product.price_iqd.toLocaleString("en-US")} دینار <small>/ {product.unit}</small></strong></div>
+                <AddToCartButton product={{
+                  productId:product.id,
+                  storeId:store.id,
+                  storeSlug:store.slug,
+                  storeName:store.name,
+                  productName:product.name,
+                  unit:product.unit,
+                  unitPriceIqd:product.price_iqd,
+                  stockQuantity:product.stock_quantity,
+                }} />
               </article>
             ))}
           </div>
