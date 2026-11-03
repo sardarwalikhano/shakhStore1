@@ -31,13 +31,15 @@ export default async function DashboardPage() {
   const roleLabel = role ? labels[role] ?? "هەژمار" : "ڕۆڵ دیاری نەکراوە";
   const displayName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email ?? "بەکارهێنەر";
 
-  const common = [{ href: "/dashboard", label: "داشبۆرد", icon: LayoutDashboard }];
+  const common = [
+    { href: "/dashboard", label: "داشبۆرد", icon: LayoutDashboard },
+    { href: "/dashboard/orders", label: "داواکاریەکان", icon: ClipboardList },
+  ];
   const roleLinks = role === "super_admin" || role === "admin"
     ? [
-        { href: "/dashboard", label: "داواکاریەکان", icon: ClipboardList },
         { href: "/dashboard", label: "فرۆشگاکان", icon: Store },
         { href: "/dashboard", label: "کۆگا و بەرهەم", icon: Boxes },
-        { href: "/dashboard", label: "جزدان و حسابداری", icon: Wallet },
+        { href: "/dashboard", label: "حسابداری", icon: Wallet },
         { href: "/dashboard", label: "زۆن و گەیاندن", icon: MapPinned },
       ]
     : role === "captain"
@@ -85,13 +87,14 @@ export default async function DashboardPage() {
           ) : role === "customer" ? (
             <section className="dashboard-panel">
               <h3>بەشی کڕیار</h3>
-              <p>کاتێک داواکاری و ناونیشانەکانت زیاد بکرێن، لێرە دەتوانیت مێژووی داواکاری و زانیاری هەژمارەکەت بەڕێوە ببەیت.</p>
-              <Link href="/search" className="text-link" style={{ marginTop: 14 }}>گەڕان لە فرۆشگاکان <ArrowUpLeft size={17} /></Link>
+              <p>داواکارییەکانت لە بەشی تایبەتی خۆت دەردەکەون. هەروەها دەتوانیت داواکاری بەشداریکردنی فرۆشگا بنێریت.</p>
+              <div className="dashboard-quick-links"><Link href="/search" className="text-link">گەڕان لە فرۆشگاکان <ArrowUpLeft size={17} /></Link><Link href="/merchant/apply" className="text-link">داواکاری دوکانداری <ArrowUpLeft size={17} /></Link></div>
             </section>
           ) : (
             <section className="dashboard-panel">
               <h3>ئامرازەکانی {roleLabel}</h3>
-              <p>بنەمای دەسەڵات لە claim ـی پشتڕاستکراوی Supabase و RLS ـەوە وەردەگیرێت. مۆدیوولە کارگێڕییەکان بە پێی قۆناغ زیاد دەکرێن؛ ئەم پەڕەیە هیچ کردارێکی کارگێڕی بە خۆکار دروست ناکات.</p>
+              <p>بنەمای دەسەڵات لە claim ـی پشتڕاستکراوی Supabase و RLS ـەوە وەردەگیرێت. لە قۆناغی ئێستادا دەتوانیت داواکاریەکانت ببینیت؛ مۆدیوولەکانی تر بە پێی قۆناغ زیاد دەکرێن.</p>
+              {(role === "restaurant" || role === "supermarket" || role === "produce_vendor" || role === "meat_seafood_vendor") && <Link href="/dashboard/products" className="text-link" style={{ marginTop: 14 }}>بەڕێوەبردنی بەرهەمەکان <ArrowUpLeft size={17} /></Link>}
             </section>
           )}
           <section className="dashboard-panel">
