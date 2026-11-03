@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpLeft, Boxes, ClipboardList, LayoutDashboard, Store } from "lucide-react";
+import { ArrowUpLeft, Boxes, ClipboardList, LayoutDashboard, MapPinned, Store } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -40,7 +40,9 @@ export default async function DashboardPage() {
     ? [{ href: "/dashboard/products", label: "بەرهەمەکان", icon: Boxes }]
     : role === "customer"
       ? [{ href: "/dashboard/addresses", label: "ناونیشانەکان", icon: Store }]
-      : [];
+      : role === "admin" || role === "super_admin"
+        ? [{ href: "/dashboard/delivery-zones", label: "ناوچەی گەیاندن", icon: MapPinned }]
+        : [];
 
   return (
     <div className="dashboard-shell">

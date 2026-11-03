@@ -1302,6 +1302,40 @@ export type Database = {
       }
       current_app_role: { Args: never; Returns: string }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
+      manage_delivery_zone_v1: {
+        Args: {
+          p_base_fee_iqd: number
+          p_city: string
+          p_district: string
+          p_is_active: boolean
+          p_maximum_distance_km: number
+          p_maximum_fee_iqd: number
+          p_minimum_fee_iqd: number
+          p_name_ckb: string
+          p_per_km_fee_iqd: number
+          p_zone_id: string
+        }
+        Returns: {
+          base_fee_iqd: number
+          city: string
+          created_at: string
+          district: string | null
+          id: string
+          is_active: boolean
+          maximum_distance_km: number | null
+          maximum_fee_iqd: number | null
+          minimum_fee_iqd: number
+          name_ckb: string
+          per_km_fee_iqd: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "delivery_zones"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       moderate_merchant_store: {
         Args: {
           p_actor_id: string

@@ -321,3 +321,21 @@ img { max-width: 100%; }
 .address-form-card{padding:23px;border:1px solid var(--color-border);border-radius:18px;background:#fff}
 @media(max-width:900px){.cart-layout,.checkout-form{grid-template-columns:1fr}.checkout-total-card{position:static}.cart-summary{order:-1}}
 @media(max-width:640px){.cart-line{grid-template-columns:48px minmax(0,1fr) 34px;gap:9px;padding:12px}.cart-product-icon{width:44px;height:44px}.quantity-control{grid-column:2;justify-content:flex-start}.cart-line-total{display:none}.cart-mobile-line-total{display:block;color:var(--color-primary);font-weight:800;font-size:.86rem}.cart-remove{grid-column:3;grid-row:1}.address-card{flex-wrap:wrap}.address-actions{width:100%;padding-inline-start:56px}.checkout-section{padding:16px}}
+
+.delivery-zones-page{max-width:1060px}
+.zone-manager{display:grid;gap:28px}
+.zone-form-card{padding:24px;border:1px solid var(--color-border);border-radius:19px;background:#fff;box-shadow:var(--shadow-card)}
+.zone-limitation{display:grid;gap:4px;padding:13px;border-radius:12px;background:#fff6ed;color:#855126;font-size:.86rem}
+.zone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.zone-card{padding:18px;border:1px solid var(--color-border);border-radius:17px;background:#fff}
+.zone-card-top{display:flex;align-items:center;justify-content:space-between}
+.zone-card-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:var(--color-primary-soft);color:var(--color-primary)}
+.zone-status{padding:4px 9px;border-radius:99px;background:#f2f2f2;color:#777;font-size:.76rem;font-weight:800}
+.zone-status.active{background:#e8f7ee;color:#198754}
+.zone-card h3{margin:12px 0 2px;font-size:1.08rem}
+.zone-card>p{margin:0 0 13px;color:var(--color-text-secondary);font-size:.86rem}
+.zone-fees{display:flex;justify-content:space-between;gap:10px;padding-block:8px;border-top:1px solid var(--color-border);font-size:.84rem}
+.zone-fees strong{white-space:nowrap}
+.zone-edit{width:100%;margin-top:13px}
+@media(max-width:900px){.zone-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.zone-grid{grid-template-columns:1fr}.zone-form-card{padding:17px}}

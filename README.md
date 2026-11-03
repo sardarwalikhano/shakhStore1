@@ -40,3 +40,8 @@ The application is connected to Supabase project \`vtxntrcsjmnmbnfxhfgz\`. SQL m
 - Apply migrations in ascending version order to a new environment. Do not replay the M10 migrations against a database where they are already recorded.
 - The customer checkout RPC accepts only cash on delivery. Wallet settlement and commissions remain disabled until their operating rules are confirmed.
 - Checkout is intentionally blocked for addresses without an active delivery zone and a configured non-distance-based fee.
+
+
+## Delivery-zone operations
+
+Administrators can manage real delivery zones at \`/dashboard/delivery-zones\`. Checkout remains disabled until at least one active city/district zone has an operator-confirmed delivery fee. Per-kilometre pricing is deliberately disabled until routing/distance calculation is implemented and verified.
