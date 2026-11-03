@@ -36,8 +36,6 @@ export function AddressBook({ userId, initialAddresses }: { userId: string; init
         district: district.trim(),
         address_line: line.trim(),
         delivery_notes: notes.trim() || null,
-        is_default: false,
-        is_active: true,
       }).select("*").single();
       if (insertError) throw insertError;
 

@@ -47,6 +47,7 @@ The application is connected to Supabase project `vtxntrcsjmnmbnfxhfgz`.
 - Deployed Edge Function sources live in `supabase/functions`; JWT verification is enabled for the role-management and merchant-review functions.
 - Regenerate `lib/database.types.ts` after schema changes and commit it with the matching migration.
 - Migration `m13_serialize_default_address_updates` serializes default-address changes per customer to avoid concurrent writes racing the unique default-address index.
+- Migration `m14_restrict_customer_address_write_columns` limits direct customer writes to address details; default/active state remains server-controlled, and the insert policy enforces active, non-default creation.
 - Do not run `supabase db reset --linked` against production. It is destructive.
 
 ## Delivery-zone operations
