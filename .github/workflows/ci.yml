@@ -25,6 +25,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Type check
         run: npm run typecheck
+      - name: Domain tests
+        run: npm test
       - name: Lint
         run: npm run lint
       - name: Production build

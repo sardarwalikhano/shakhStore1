@@ -1,6 +1,11 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  calculateCartSubtotal,
+  isValidCartLine,
+  normalizeCartQuantity,
+} from "@/lib/marketplace-rules";
 
 export type CartProductInput = {
   productId: string;
@@ -27,27 +32,13 @@ type CartContextValue = {
 const STORAGE_KEY = "shakh-store-cart-v1";
 const CartContext = createContext<CartContextValue | null>(null);
 
-function supportsFractionalQuantity(unit: string) {
-  return unit === "kg" || unit === "liter";
-}
-
 function isCartLine(value: unknown): value is CartLine {
-  if (typeof value !== "object" || value === null) return false;
+  if (!isValidCartLine(value)) return false;
   const item = value as Record<string, unknown>;
-  return typeof item.productId === "string"
-    && typeof item.storeId === "string"
+  return typeof item.storeId === "string"
     && typeof item.storeSlug === "string"
     && typeof item.storeName === "string"
-    && typeof item.productName === "string"
-    && typeof item.unit === "string"
-    && typeof item.unitPriceIqd === "number"
-    && Number.isFinite(item.unitPriceIqd)
-    && item.unitPriceIqd >= 0
-    && (typeof item.stockQuantity === "number" || item.stockQuantity === null)
-    && (item.stockQuantity === null || (Number.isSafeInteger(item.stockQuantity) && item.stockQuantity >= 0))
-    && typeof item.quantity === "number"
-    && Number.isFinite(item.quantity)
-    && item.quantity > 0;
+    && typeof item.productName === "string";
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -61,9 +52,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (raw) {
           const parsed: unknown = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            setItems(parsed.filter(isCartLine).filter((item) =>
-              item.stockQuantity === null || item.stockQuantity > 0
-            ));
+            const restored = parsed.filter(isCartLine).flatMap((item) => {
+              const quantity = normalizeCartQuantity(
+                item.unit,
+                item.quantity,
+                item.stockQuantity,
+              );
+              return quantity === null ? [] : [{ ...item, quantity }];
+            });
+            setItems(restored);
           }
         }
       } catch {
@@ -86,12 +83,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback((product: CartProductInput) => {
     setItems((current) => {
-      const maximum = product.stockQuantity ?? 999999;
-      if (maximum <= 0) return current;
+      const quantityAvailable = product.stockQuantity ?? 999999;
+      if (quantityAvailable <= 0) return current;
       const existing = current.find((item) => item.productId === product.productId);
       if (existing) {
+        const quantity = normalizeCartQuantity(
+          product.unit,
+          existing.quantity + 1,
+          product.stockQuantity,
+        );
+        if (quantity === null) return current;
         return current.map((item) => item.productId === product.productId
-          ? { ...item, stockQuantity: product.stockQuantity, unitPriceIqd: product.unitPriceIqd, quantity: Math.min(maximum, item.quantity + 1) }
+          ? {
+              ...item,
+              ...product,
+              quantity,
+            }
           : item);
       }
       return [...current, { ...product, quantity: 1 }];
@@ -99,16 +106,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setQuantity = useCallback((productId: string, requested: number) => {
-    if (!Number.isFinite(requested) || requested <= 0) return;
     setItems((current) => current.map((item) => {
       if (item.productId !== productId) return item;
-      const fractional = supportsFractionalQuantity(item.unit);
-      const min = fractional ? 0.01 : 1;
-      const max = item.stockQuantity ?? 999999;
-      const normalized = fractional
-        ? Math.round(requested * 100) / 100
-        : Math.floor(requested);
-      return { ...item, quantity: Math.min(max, Math.max(min, normalized)) };
+      const quantity = normalizeCartQuantity(
+        item.unit,
+        requested,
+        item.stockQuantity,
+      );
+      return quantity === null ? item : { ...item, quantity };
     }));
   }, []);
 
@@ -122,7 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     items,
     hydrated,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
-    subtotalIqd: items.reduce((sum, item) => sum + Math.round(item.unitPriceIqd * item.quantity), 0),
+    subtotalIqd: calculateCartSubtotal(items),
     addItem,
     setQuantity,
     removeItem,

@@ -30,11 +30,12 @@ Shakh Store is a Sorani Kurdish, RTL-first multi-store marketplace built with Ne
 ## Validation commands
 
 - `npm run typecheck`
+- `npm test` (Node.js built-in test runner; no extra test dependency)
 - `npm run lint`
 - `npm audit --omit=dev --audit-level=high`
 - `npm run build`
 
-GitHub Actions runs the install, production dependency audit, TypeScript, ESLint, and production build checks for pushes and pull requests to `main`.
+GitHub Actions runs install, production dependency audit, TypeScript, domain-rule unit tests, ESLint, and production build checks for pushes and pull requests to `main`.
 
 ## Supabase project and migrations
 
@@ -45,6 +46,7 @@ The application is connected to Supabase project `vtxntrcsjmnmbnfxhfgz`.
 - Before pushing schema changes, inspect the linked migration history and review the generated SQL.
 - Deployed Edge Function sources live in `supabase/functions`; JWT verification is enabled for the role-management and merchant-review functions.
 - Regenerate `lib/database.types.ts` after schema changes and commit it with the matching migration.
+- Migration `m13_serialize_default_address_updates` serializes default-address changes per customer to avoid concurrent writes racing the unique default-address index.
 - Do not run `supabase db reset --linked` against production. It is destructive.
 
 ## Delivery-zone operations

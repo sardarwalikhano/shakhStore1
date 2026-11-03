@@ -22,7 +22,15 @@ export type CheckoutAddress = {
 
 function money(value: number) { return value.toLocaleString("en-US") + " دینار"; }
 
-export function CheckoutForm({ addresses, hasAnyActiveZone }: { addresses: CheckoutAddress[]; hasAnyActiveZone: boolean }) {
+export function CheckoutForm({
+  addresses,
+  hasAnyActiveZone,
+  dataLoadError = false,
+}: {
+  addresses: CheckoutAddress[];
+  hasAnyActiveZone: boolean;
+  dataLoadError?: boolean;
+}) {
   const router = useRouter();
   const { items, subtotalIqd, hydrated, clearCart } = useCart();
   const [addressId, setAddressId] = useState(addresses.find(x=>x.isDefault)?.id ?? addresses[0]?.id ?? "");
@@ -67,7 +75,14 @@ export function CheckoutForm({ addresses, hasAnyActiveZone }: { addresses: Check
       if (message.includes("DELIVERY_ZONE_UNAVAILABLE")) setError("هێشتا ناوچەی گەیاندنی چالاک بۆ ئەم ناونیشانە دانەنراوە.");
       else if (message.includes("DELIVERY_DISTANCE_NOT_CONFIGURED")) setError("ڕێژەی گەیاندنی کیلۆمەترێکی ئەم ناوچەیە هێشتا بە خزمەتگوزاریی مەودا نەبەستراوەتەوە.");
       else if (message.includes("INSUFFICIENT_STOCK")) setError("stockی یەکێک لە بەرهەمەکان بەشی ئەم داواکارییە ناکات. سەبەتە نوێ بکەرەوە.");
-      else if (message.includes("PRODUCT_NOT_AVAILABLE")) setError("یەکێک لە بەرهەمەکان ئێستا بەردەست نییە.");
+      else if (message.includes("PRODUCT_NOT_AVAILABLE") || message.includes("PRODUCT_NOT_FOUND")) setError("یەکێک لە بەرهەمەکان ئێستا بەردەست نییە یان لە سیستەمدا نەماوە.");
+      else if (message.includes("INVALID_PRODUCT_QUANTITY")) setError("بڕی یەکێک لە بەرهەمەکان نادروستە. بڕەکان لە سەبەتە ڕێکبخە.");
+      else if (message.includes("INVALID_CART_ITEMS")) setError("ناوەڕۆکی سەبەتە نادروستە. سەبەتە نوێ بکەرەوە و دووبارە هەوڵ بدە.");
+      else if (message.includes("STORE_FULFILLMENT_NOT_CONFIGURED")) setError("فرۆشگایەک لە سەبەتەدا هێشتا ئامادەی وەرگرتنی داواکاری نییە.");
+      else if (message.includes("ADDRESS_NOT_FOUND")) setError("ناونیشانی هەڵبژێردراو چیتر چالاک نییە. ناونیشانێکی تر هەڵبژێرە.");
+      else if (message.includes("CUSTOMER_NOTE_TOO_LONG")) setError("تێبینی داواکاری زۆر درێژە.");
+      else if (message.includes("INVALID_IDEMPOTENCY_KEY")) setError("کلیلێکی پاراستنی داواکاری دروست نەبوو. تکایە دووبارە هەوڵ بدە.");
+      else if (message.includes("AUTH_REQUIRED")) setError("پێویستە دووبارە بچیتە ژوورەوە.");
       else if (message.includes("PAYMENT_METHOD_NOT_ENABLED")) setError("ئەم شێوازی پارەدانە هێشتا چالاک نییە.");
       else if (message.includes("CUSTOMER_ROLE_REQUIRED")) setError("هەژمارەکەت وەک کڕیار ڕێک نەخراوە.");
       else setError(message);
@@ -77,6 +92,17 @@ export function CheckoutForm({ addresses, hasAnyActiveZone }: { addresses: Check
   }
 
   if (!hydrated) return <div className="empty-state">Checkout بار دەکرێت...</div>;
+  if (dataLoadError) {
+    return (
+      <div className="empty-state">
+        <strong>زانیاری ناونیشان یان ناوچەی گەیاندن نەخوێندرایەوە.</strong>
+        <span className="muted">Checkout بۆ پاراستنی نرخ و ناونیشان تا چارەسەرکردنی پەیوەندی داتابەیس ڕاناوەستێت.</span>
+        <button type="button" className="button button-secondary" style={{ marginTop: 12 }} onClick={() => router.refresh()}>
+          دووبارە هەوڵ بدە
+        </button>
+      </div>
+    );
+  }
   if (success) {
     return (
       <section className="checkout-success">
