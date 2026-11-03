@@ -42,13 +42,13 @@ test("delivery zone lookup rejects a different city and blank location", () => {
   assert.equal(resolveDeliveryZone([cityWide], "", "ناوەندی"), null);
 });
 
-test("flat delivery fee applies the larger of base and minimum then caps the maximum", () => {
+test("flat delivery fee applies the larger of base and minimum then caps a valid maximum", () => {
   assert.equal(calculateFlatDeliveryFee({
     ...cityWide,
-    base_fee_iqd: 1500,
+    base_fee_iqd: 2500,
     minimum_fee_iqd: 2000,
-    maximum_fee_iqd: 1800,
-  }), 1800);
+    maximum_fee_iqd: 2200,
+  }), 2200);
 });
 
 test("distance pricing and inactive zones are not treated as flat-rate serviceable", () => {
