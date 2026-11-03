@@ -5,6 +5,8 @@ import { StoreCard } from "@/components/store-card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/database.types";
 
+type StoreCardData = Pick<Tables<"stores">, "id" | "name" | "slug" | "merchant_category" | "description" | "city" | "district">;
+
 const categories = [
   { slug: "restaurant", label: "چێشتخانە", description: "خواردنی گەرم و ئامادە", icon: CookingPot },
   { slug: "supermarket", label: "سوپەرمارکێت", description: "پێداویستییە ڕۆژانەکان", icon: ShoppingBasket },
@@ -16,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient();
-  let stores: Tables<"stores">[] = [];
+  let stores: StoreCardData[] = [];
   let configured = Boolean(supabase);
 
   if (supabase) {
