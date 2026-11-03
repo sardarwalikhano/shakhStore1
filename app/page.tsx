@@ -22,7 +22,7 @@ export default async function HomePage() {
   if (supabase) {
     const { data, error } = await supabase
       .from("stores")
-      .select("id, name, slug, merchant_category, description, logo_url, city, district, status, is_platform_store, owner_id, phone, contact_person, address_line, created_at, updated_at")
+      .select("id, name, slug, merchant_category, description, city, district")
       .eq("status", "active")
       .eq("is_platform_store", false)
       .order("created_at", { ascending: false })
