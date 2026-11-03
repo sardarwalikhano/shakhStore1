@@ -20,7 +20,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ckb" dir="rtl">
+    <html lang="ckb" dir="rtl" data-scroll-behavior="smooth">
       <body>{children}</body>
     </html>
   );
