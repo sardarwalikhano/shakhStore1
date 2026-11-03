@@ -27,7 +27,7 @@ export default async function HomePage() {
       .select("id, name, slug, merchant_category, description, city, district")
       .eq("status", "active")
       .eq("is_platform_store", false)
-      .order("created_at", { ascending: false })
+      .order("name", { ascending: true })
       .limit(8);
     if (!error && data) stores = data;
     if (error) configured = false;
