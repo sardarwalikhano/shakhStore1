@@ -28,9 +28,13 @@ export default async function AddressesPage() {
       subtitle="ناونیشانەکانت زیاد بکە و یەکێکیان وەک بنەڕەتی دیاری بکە."
       activePath="/dashboard/addresses"
     >
-      {error
-        ? <div className="empty-state"><strong>نەتوانرا ناونیشانەکان بخوێندرێنەوە</strong><span className="muted">دەستڕاگەیشتنی هەژمارەکەت پشکنە.</span></div>
-        : <AddressBook userId={user.id} initialAddresses={addresses ?? []} />}
+      {role !== "customer" ? (
+        <div className="empty-state"><strong>ئەم بەشە تەنها بۆ هەژماری کڕیارە.</strong></div>
+      ) : error ? (
+        <div className="empty-state"><strong>نەتوانرا ناونیشانەکان بخوێندرێنەوە</strong><span className="muted">دەستڕاگەیشتنی هەژمارەکەت پشکنە.</span></div>
+      ) : (
+        <AddressBook userId={user.id} initialAddresses={addresses ?? []} />
+      )}
     </DashboardFrame>
   );
 }
