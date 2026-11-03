@@ -23,7 +23,7 @@ export default function SignupPage() {
         password,
         options: {
           data: { full_name: fullName, preferred_locale: "ckb" },
-          emailRedirectTo: \`\${window.location.origin}/auth/callback?next=/dashboard\`,
+          emailRedirectTo: window.location.origin + "/auth/callback?next=/dashboard",
         },
       });
       if (authError) throw authError;
