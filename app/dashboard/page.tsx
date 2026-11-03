@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpLeft, Boxes, ClipboardList, LayoutDashboard, MapPinned, Store, Wallet } from "lucide-react";
+import { ArrowUpLeft, Boxes, ClipboardList, LayoutDashboard, Store } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -35,27 +35,10 @@ export default async function DashboardPage() {
     { href: "/dashboard", label: "داشبۆرد", icon: LayoutDashboard },
     { href: "/dashboard/orders", label: "داواکاریەکان", icon: ClipboardList },
   ];
-  const roleLinks = role === "super_admin" || role === "admin"
-    ? [
-        { href: "/dashboard", label: "فرۆشگاکان", icon: Store },
-        { href: "/dashboard", label: "کۆگا و بەرهەم", icon: Boxes },
-        { href: "/dashboard", label: "حسابداری", icon: Wallet },
-        { href: "/dashboard", label: "زۆن و گەیاندن", icon: MapPinned },
-      ]
-    : role === "captain"
-      ? [
-          { href: "/dashboard", label: "داواکاریەکانم", icon: ClipboardList },
-          { href: "/dashboard", label: "نەخشەی گەیاندن", icon: MapPinned },
-          { href: "/dashboard", label: "جزدان", icon: Wallet },
-        ]
-      : role && role !== "customer"
-        ? [
-            { href: "/dashboard", label: "داواکاریەکان", icon: ClipboardList },
-            { href: "/dashboard", label: "بەرهەمەکان", icon: Boxes },
-            { href: "/dashboard", label: "فرۆشگاکەم", icon: Store },
-            { href: "/dashboard", label: "حسابداری", icon: Wallet },
-          ]
-        : [];
+  const merchantRoles = ["restaurant", "supermarket", "produce_vendor", "meat_seafood_vendor"];
+  const roleLinks = role && merchantRoles.includes(role)
+    ? [{ href: "/dashboard/products", label: "بەرهەمەکان", icon: Boxes }]
+    : [];
 
   return (
     <div className="dashboard-shell">
