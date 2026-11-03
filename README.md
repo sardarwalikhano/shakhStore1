@@ -1,47 +1,68 @@
 # Shakh Store
 
-Shakh Store is a Sorani Kurdish, RTL-first multi-store marketplace built with Next.js, TypeScript, and Supabase.
+Shakh Store is a Sorani Kurdish, RTL-first multi-store marketplace built with Next.js 16, React 19, TypeScript, and Supabase.
 
-## Product principles
+## Product scope
 
 - Customer marketplace for restaurants, supermarkets, meat and seafood, and fruits and vegetables.
-- Separate, permission-aware experiences for customers, merchants, delivery captains, and administrators.
-- Actual application data comes from the configured Supabase project; empty states are used instead of fabricated operational metrics.
-- Supabase Row Level Security remains the authorization boundary. Client-side role checks are only for navigation and never replace server/database enforcement.
-- Financial and order operations remain server/database controlled.
+- Customer accounts, password recovery, address book, persistent cart, and cash-on-delivery checkout.
+- Merchant onboarding with an administrator review workflow.
+- Role-aware dashboards for customers, merchants, delivery captains, admins, and super admins.
+- Delivery-zone administration with city/district coverage and IQD fees.
+- Real Supabase data only. Empty states are used instead of fabricated operational metrics.
+
+## Security principles
+
+- Supabase Row Level Security is the authorization boundary; client-side role checks only control navigation and presentation.
+- Authorization roles are read from trusted Supabase Auth app metadata, not user-editable metadata.
+- Order creation, fee calculation, product prices, inventory checks, and stock updates are performed by database-side logic.
+- The public application uses only the Supabase publishable key. Never expose a service-role or secret key in browser code or a `NEXT_PUBLIC_*` variable.
+- Checkout currently supports cash on delivery only. Wallet settlement, payment integrations, and commission settlement remain disabled until their operational rules are confirmed.
 
 ## Local development
 
-1. Install Node.js 20 or later.
-2. Copy \`.env.example\` to \`.env.local\`.
-3. Set \`NEXT_PUBLIC_SUPABASE_URL\` and the project's publishable/anon key.
-4. Install dependencies with \`npm install\`.
-5. Run \`npm run dev\`.
+1. Use Node.js 22.
+2. Copy `.env.example` to `.env.local`.
+3. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+4. Install dependencies with `npm ci`.
+5. Start the app with `npm run dev`.
 
-## Validation
+## Validation commands
 
-- \`npm run typecheck\`
-- \`npm run lint\`
-- \`npm run build\`
+- `npm run typecheck`
+- `npm run lint`
+- `npm audit --omit=dev --audit-level=high`
+- `npm run build`
 
-## Deployment
-
-The production branch is \`main\`. Connect this repository to a new Vercel project after the first verified code commit. Configure the same public Supabase URL and publishable key in Vercel for Preview and Production.
-
-Do not add service-role keys or other server secrets to \`NEXT_PUBLIC_*\` variables.
-
+GitHub Actions runs the install, production dependency audit, TypeScript, ESLint, and production build checks for pushes and pull requests to `main`.
 
 ## Supabase project and migrations
 
-The application is connected to Supabase project \`vtxntrcsjmnmbnfxhfgz\`. SQL migrations live in \`supabase/migrations\`; deployed Edge Function sources live in \`supabase/functions\`.
+The application is connected to Supabase project `vtxntrcsjmnmbnfxhfgz`.
 
-- Keep \`NEXT_PUBLIC_SUPABASE_URL\` and \`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY\` in Vercel.
-- Never expose a Supabase secret/service-role key in browser code or a \`NEXT_PUBLIC_*\` variable.
-- Apply migrations in ascending version order to a new environment. Do not replay the M10 migrations against a database where they are already recorded.
-- The customer checkout RPC accepts only cash on delivery. Wallet settlement and commissions remain disabled until their operating rules are confirmed.
-- Checkout is intentionally blocked for addresses without an active delivery zone and a configured non-distance-based fee.
-
+- SQL migration sources live in `supabase/migrations` and are named with the exact versions recorded in the remote migration history.
+- Apply migrations in ascending version order in a new environment. Do not replay migrations that are already recorded on a linked project.
+- Before pushing schema changes, inspect the linked migration history and review the generated SQL.
+- Deployed Edge Function sources live in `supabase/functions`; JWT verification is enabled for the role-management and merchant-review functions.
+- Regenerate `lib/database.types.ts` after schema changes and commit it with the matching migration.
+- Do not run `supabase db reset --linked` against production. It is destructive.
 
 ## Delivery-zone operations
 
-Administrators can manage real delivery zones at \`/dashboard/delivery-zones\`. Checkout remains disabled until at least one active city/district zone has an operator-confirmed delivery fee. Per-kilometre pricing is deliberately disabled until routing/distance calculation is implemented and verified.
+Administrators manage delivery zones at `/dashboard/delivery-zones`. A zone with a blank district applies to all districts within the exact city value. Customer and merchant address forms must use the same city spelling stored in the zone configuration.
+
+The first confirmed coverage entry is:
+
+| City | District | Delivery fee | Status |
+| --- | --- | ---: | --- |
+| بەردەڕەش | All districts | 1,000 IQD | Active |
+
+The fee is a flat non-distance-based fee. Per-kilometre pricing remains disabled until a distance calculation service is implemented and verified. Checkout rejects addresses outside active coverage.
+
+## Merchant operations
+
+Customers can submit store applications at `/merchant/apply`. Admins and super admins review them at `/dashboard/merchant-applications`. The review Edge Function performs trusted role assignment and records the review through the database workflow. A merchant cannot assign their own role.
+
+## Deployment
+
+The production project is `shakh-store1` on Vercel. The production hostname is `shakh-store1.vercel.app`. Configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for Production, Preview, and Development. Preview-only access protection may be enabled independently of Production.

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./release-ui.css";
 import { CartProvider } from "@/components/cart-provider";
 
 export const metadata: Metadata = {

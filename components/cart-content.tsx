@@ -37,17 +37,17 @@ export function CartContent() {
               <div className="cart-mobile-line-total">{money(Math.round(item.unitPriceIqd * item.quantity))}</div>
             </div>
             <div className="quantity-control">
-              <button type="button" aria-label="زیادکردنی بڕ" onClick={() => setQuantity(item.productId, item.quantity + (item.unit === "kg" ? 0.1 : 1))}><Plus size={15} /></button>
+              <button type="button" aria-label="زیادکردنی بڕ" onClick={() => setQuantity(item.productId, item.quantity + (item.unit === "kg" || item.unit === "liter" ? 0.1 : 1))}><Plus size={15} /></button>
               <input
                 aria-label={"بڕی " + item.productName}
                 type="number"
-                min={item.unit === "kg" ? "0.01" : "1"}
+                min={item.unit === "kg" || item.unit === "liter" ? "0.01" : "1"}
                 max={item.stockQuantity ?? undefined}
-                step={item.unit === "kg" ? "0.01" : "1"}
+                step={item.unit === "kg" || item.unit === "liter" ? "0.01" : "1"}
                 value={item.quantity}
                 onChange={event => setQuantity(item.productId, Number(event.target.value))}
               />
-              <button type="button" aria-label="کەمکردنەوەی بڕ" onClick={() => item.quantity <= (item.unit === "kg" ? 0.01 : 1) ? removeItem(item.productId) : setQuantity(item.productId, item.quantity - (item.unit === "kg" ? 0.1 : 1))}><Minus size={15} /></button>
+              <button type="button" aria-label="کەمکردنەوەی بڕ" onClick={() => item.quantity <= (item.unit === "kg" || item.unit === "liter" ? 0.01 : 1) ? removeItem(item.productId) : setQuantity(item.productId, item.quantity - (item.unit === "kg" || item.unit === "liter" ? 0.1 : 1))}><Minus size={15} /></button>
             </div>
             <strong className="cart-line-total">{money(Math.round(item.unitPriceIqd * item.quantity))}</strong>
             <button type="button" className="cart-remove" onClick={() => removeItem(item.productId)} aria-label={"سڕینەوەی " + item.productName}><Trash2 size={18} /></button>

@@ -1,11 +1,18 @@
 import Link from "next/link";
-import { ArrowLeft, Apple, Beef, CookingPot, Gift, ShoppingBasket, Sparkles, Utensils } from "lucide-react";
+import { ArrowLeft, Apple, Beef, CookingPot, Gift, MapPin, ShoppingBasket, Sparkles, Utensils } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { StoreCard } from "@/components/store-card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/database.types";
 
-type StoreCardData = Pick<Tables<"stores">, "id" | "name" | "slug" | "merchant_category" | "description" | "city" | "district">;
+type StoreCardData = Pick<
+  Tables<"stores">,
+  "id" | "name" | "slug" | "merchant_category" | "description" | "city" | "district"
+>;
+type DeliveryZoneData = Pick<
+  Tables<"delivery_zones">,
+  "id" | "name_ckb" | "city" | "district" | "base_fee_iqd" | "minimum_fee_iqd" | "maximum_fee_iqd"
+>;
 
 const categories = [
   { slug: "restaurant", label: "چێشتخانە", description: "خواردنی گەرم و ئامادە", icon: CookingPot },
@@ -14,23 +21,42 @@ const categories = [
   { slug: "fruits_vegetables", label: "سەوزە و میوە", description: "بەرهەمی تازە", icon: Apple },
 ];
 
+function zoneFee(zone: DeliveryZoneData) {
+  return Math.min(
+    zone.maximum_fee_iqd ?? Number.MAX_SAFE_INTEGER,
+    Math.max(zone.base_fee_iqd, zone.minimum_fee_iqd),
+  );
+}
+
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient();
   let stores: StoreCardData[] = [];
+  let deliveryZones: DeliveryZoneData[] = [];
   let configured = Boolean(supabase);
+  let zonesAvailable = Boolean(supabase);
 
   if (supabase) {
-    const { data, error } = await supabase
-      .from("stores")
-      .select("id, name, slug, merchant_category, description, city, district")
-      .eq("status", "active")
-      .eq("is_platform_store", false)
-      .order("name", { ascending: true })
-      .limit(8);
-    if (!error && data) stores = data;
-    if (error) configured = false;
+    const [storeResult, zoneResult] = await Promise.all([
+      supabase.from("stores")
+        .select("id,name,slug,merchant_category,description,city,district")
+        .eq("status", "active")
+        .eq("is_platform_store", false)
+        .order("name", { ascending: true })
+        .limit(8),
+      supabase.from("delivery_zones")
+        .select("id,name_ckb,city,district,base_fee_iqd,minimum_fee_iqd,maximum_fee_iqd")
+        .eq("is_active", true)
+        .order("city")
+        .limit(8),
+    ]);
+
+    if (!storeResult.error && storeResult.data) stores = storeResult.data;
+    else configured = false;
+
+    if (!zoneResult.error && zoneResult.data) deliveryZones = zoneResult.data;
+    else zonesAvailable = false;
   }
 
   return (
@@ -47,7 +73,7 @@ export default async function HomePage() {
                 <Link href="/search" className="button">دەستپێکردنی گەڕان <ArrowLeft size={18} /></Link>
                 <Link href="/signup" className="button button-secondary">دروستکردنی هەژمار</Link>
               </div>
-              <div className="hero-trust"><span /> بە زمانی کوردی، بۆ شار و ناوچەکانی کوردستان</div>
+              <div className="hero-trust"><span /> بە زمانی کوردی و داواکارییەکی پارێزراو</div>
             </div>
             <div className="hero-visual" aria-label="وێنەیەکی هونەری بۆ خواردن و پێداویستییەکان">
               <div className="hero-glow" />
@@ -74,6 +100,30 @@ export default async function HomePage() {
                 <ArrowLeft className="category-arrow" size={17} />
               </Link>
             ))}
+          </div>
+        </section>
+
+        <section className="delivery-coverage-section">
+          <div className="container">
+            <div className="coverage-heading">
+              <div><span className="eyebrow"><MapPin size={15} /> ناوچەی گەیاندن</span><h2>لە کوێ گەیاندن چالاکە؟</h2><p>شار و کرێی گەیاندن بە پێی ڕێکخستنی ڕاستەقینەی پلاتفۆرم پیشان دەدرێت.</p></div>
+              <span className="coverage-count">{deliveryZones.length.toLocaleString("en-US")} ناوچەی چالاک</span>
+            </div>
+            {!zonesAvailable ? (
+              <div className="coverage-empty">زانیاری ناوچەی گەیاندن لەم کاتەدا بەردەست نییە.</div>
+            ) : deliveryZones.length === 0 ? (
+              <div className="coverage-empty">خزمەتگوزاری گەیاندن هێشتا لە ناوچەکاندا ڕێکنەخراوە.</div>
+            ) : (
+              <div className="delivery-zone-preview">
+                {deliveryZones.map((zone) => (
+                  <article className="delivery-zone-preview-card" key={zone.id}>
+                    <span className="coverage-map-icon"><MapPin size={20} /></span>
+                    <div><strong>{zone.name_ckb}</strong><small>{zone.city}{zone.district ? "، " + zone.district : " · هەموو شار"}</small></div>
+                    <b>{zoneFee(zone).toLocaleString("en-US")} دینار</b>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

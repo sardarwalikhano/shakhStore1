@@ -27,6 +27,10 @@ type CartContextValue = {
 const STORAGE_KEY = "shakh-store-cart-v1";
 const CartContext = createContext<CartContextValue | null>(null);
 
+function supportsFractionalQuantity(unit: string) {
+  return unit === "kg" || unit === "liter";
+}
+
 function isCartLine(value: unknown): value is CartLine {
   if (typeof value !== "object" || value === null) return false;
   const item = value as Record<string, unknown>;
@@ -37,7 +41,10 @@ function isCartLine(value: unknown): value is CartLine {
     && typeof item.productName === "string"
     && typeof item.unit === "string"
     && typeof item.unitPriceIqd === "number"
+    && Number.isFinite(item.unitPriceIqd)
+    && item.unitPriceIqd >= 0
     && (typeof item.stockQuantity === "number" || item.stockQuantity === null)
+    && (item.stockQuantity === null || (Number.isSafeInteger(item.stockQuantity) && item.stockQuantity >= 0))
     && typeof item.quantity === "number"
     && Number.isFinite(item.quantity)
     && item.quantity > 0;
@@ -53,7 +60,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const raw = window.localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed: unknown = JSON.parse(raw);
-          if (Array.isArray(parsed)) setItems(parsed.filter(isCartLine));
+          if (Array.isArray(parsed)) {
+            setItems(parsed.filter(isCartLine).filter((item) =>
+              item.stockQuantity === null || item.stockQuantity > 0
+            ));
+          }
         }
       } catch {
         window.localStorage.removeItem(STORAGE_KEY);
@@ -74,12 +85,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, hydrated]);
 
   const addItem = useCallback((product: CartProductInput) => {
-    setItems(current => {
-      const existing = current.find(item => item.productId === product.productId);
+    setItems((current) => {
       const maximum = product.stockQuantity ?? 999999;
+      if (maximum <= 0) return current;
+      const existing = current.find((item) => item.productId === product.productId);
       if (existing) {
-        return current.map(item => item.productId === product.productId
-          ? { ...item, quantity: Math.min(maximum, item.quantity + 1) }
+        return current.map((item) => item.productId === product.productId
+          ? { ...item, stockQuantity: product.stockQuantity, unitPriceIqd: product.unitPriceIqd, quantity: Math.min(maximum, item.quantity + 1) }
           : item);
       }
       return [...current, { ...product, quantity: 1 }];
@@ -88,19 +100,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const setQuantity = useCallback((productId: string, requested: number) => {
     if (!Number.isFinite(requested) || requested <= 0) return;
-    setItems(current => current.map(item => {
+    setItems((current) => current.map((item) => {
       if (item.productId !== productId) return item;
-      const min = item.unit === "kg" ? 0.01 : 1;
+      const fractional = supportsFractionalQuantity(item.unit);
+      const min = fractional ? 0.01 : 1;
       const max = item.stockQuantity ?? 999999;
-      const normalized = item.unit === "piece" || item.unit === "pack"
-        ? Math.floor(requested)
-        : Math.round(requested * 100) / 100;
+      const normalized = fractional
+        ? Math.round(requested * 100) / 100
+        : Math.floor(requested);
       return { ...item, quantity: Math.min(max, Math.max(min, normalized)) };
     }));
   }, []);
 
   const removeItem = useCallback((productId: string) => {
-    setItems(current => current.filter(item => item.productId !== productId));
+    setItems((current) => current.filter((item) => item.productId !== productId));
   }, []);
 
   const clearCart = useCallback(() => setItems([]), []);

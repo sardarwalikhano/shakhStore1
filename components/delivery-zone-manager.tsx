@@ -15,7 +15,7 @@ export function DeliveryZoneManager({ initialZones }: { initialZones: DeliveryZo
   const [zones, setZones] = useState(initialZones);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [city, setCity] = useState("هەولێر");
+  const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
   const [baseFee, setBaseFee] = useState("0");
   const [minimumFee, setMinimumFee] = useState("0");
@@ -26,7 +26,7 @@ export function DeliveryZoneManager({ initialZones }: { initialZones: DeliveryZo
   const [success, setSuccess] = useState("");
 
   function clearForm() {
-    setEditingId(null); setName(""); setCity("هەولێر"); setDistrict("");
+    setEditingId(null); setName(""); setCity(""); setDistrict("");
     setBaseFee("0"); setMinimumFee("0"); setMaximumFee(""); setActive(false);
   }
 
@@ -99,7 +99,7 @@ export function DeliveryZoneManager({ initialZones }: { initialZones: DeliveryZo
         </div>
         <form className="merchant-form" onSubmit={submit}>
           <div className="merchant-field"><label htmlFor="zone-name">ناوی ناوچە *</label><input className="plain-field" id="zone-name" required minLength={2} maxLength={120} value={name} onChange={e=>setName(e.target.value)} placeholder="ناوی ناوچە بە کوردی" /></div>
-          <div className="merchant-field"><label htmlFor="zone-city">شار *</label><input className="plain-field" id="zone-city" required minLength={2} maxLength={100} value={city} onChange={e=>setCity(e.target.value)} /></div>
+          <div className="merchant-field"><label htmlFor="zone-city">شار *</label><input className="plain-field" id="zone-city" required minLength={2} maxLength={100} value={city} onChange={e=>setCity(e.target.value)} placeholder="ناوی شار" /></div>
           <div className="merchant-field"><label htmlFor="zone-district">گەڕەک (بەتاڵ = هەموو شار)</label><input className="plain-field" id="zone-district" maxLength={120} value={district} onChange={e=>setDistrict(e.target.value)} /></div>
           <div className="merchant-field"><label htmlFor="zone-base">کرێی بنەڕەت (IQD) *</label><input className="plain-field" id="zone-base" type="number" min="0" step="1" required value={baseFee} onChange={e=>setBaseFee(e.target.value)} /></div>
           <div className="merchant-field"><label htmlFor="zone-min">کەمترین کرێ (IQD) *</label><input className="plain-field" id="zone-min" type="number" min="0" step="1" required value={minimumFee} onChange={e=>setMinimumFee(e.target.value)} /></div>

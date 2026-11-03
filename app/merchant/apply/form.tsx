@@ -20,7 +20,7 @@ export function MerchantApplicationForm() {
   const [description, setDescription] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("هەولێر");
+  const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
   const [addressLine, setAddressLine] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,7 +72,7 @@ export function MerchantApplicationForm() {
         <div className="merchant-field"><label htmlFor="category">جۆری فرۆشگا *</label><select id="category" required value={category} onChange={(e) => setCategory(e.target.value)}>{categories.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></div>
         <div className="merchant-field"><label htmlFor="contactPerson">ناوی کەسی پەیوەندی *</label><div className="field-wrap"><UserRound size={18} /><input id="contactPerson" required minLength={2} maxLength={120} value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div></div>
         <div className="merchant-field"><label htmlFor="phone">ژمارەی مۆبایل *</label><div className="field-wrap"><Phone size={18} /><input id="phone" type="tel" dir="ltr" required minLength={7} maxLength={32} value={phone} onChange={(e) => setPhone(e.target.value)} /></div></div>
-        <div className="merchant-field"><label htmlFor="city">شار *</label><div className="field-wrap"><MapPin size={18} /><input id="city" required minLength={2} maxLength={100} value={city} onChange={(e) => setCity(e.target.value)} /></div></div>
+        <div className="merchant-field"><label htmlFor="city">شار *</label><div className="field-wrap"><MapPin size={18} /><input id="city" required minLength={2} maxLength={100} value={city} onChange={(e) => setCity(e.target.value)} placeholder="ناوی شار" /></div></div>
         <div className="merchant-field"><label htmlFor="district">گەڕەک *</label><div className="field-wrap"><input id="district" required minLength={2} maxLength={120} value={district} onChange={(e) => setDistrict(e.target.value)} /></div></div>
         <div className="merchant-field merchant-field-wide"><label htmlFor="addressLine">ناونیشانی تەواو *</label><div className="field-wrap"><input id="addressLine" required minLength={3} maxLength={240} value={addressLine} onChange={(e) => setAddressLine(e.target.value)} /></div></div>
         <div className="merchant-field merchant-field-wide"><label htmlFor="description">کورتەیەک لەسەر فرۆشگا</label><textarea id="description" rows={4} maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} /></div>

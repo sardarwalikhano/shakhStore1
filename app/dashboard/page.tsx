@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpLeft, Boxes, ClipboardList, LayoutDashboard, MapPinned, Store } from "lucide-react";
-import { SignOutButton } from "@/components/sign-out-button";
+import { ArrowUpLeft, Boxes, ClipboardList, MapPinned, Store } from "lucide-react";
+import { DashboardFrame } from "@/components/dashboard-frame";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const labels: Record<string, string> = {
+type DashboardRole =
+  | "super_admin" | "admin" | "restaurant" | "supermarket"
+  | "produce_vendor" | "meat_seafood_vendor" | "captain" | "customer";
+
+const labels: Record<DashboardRole, string> = {
   super_admin: "سوپەر ئەدمین",
   admin: "بەڕێوەبەر",
   restaurant: "دوکانداری چێشتخانە",
@@ -27,70 +31,70 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   const rawRole = user.app_metadata?.role;
-  const role = typeof rawRole === "string" ? rawRole : null;
-  const roleLabel = role ? labels[role] ?? "هەژمار" : "ڕۆڵ دیاری نەکراوە";
-  const displayName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email ?? "بەکارهێنەر";
-
-  const common = [
-    { href: "/dashboard", label: "داشبۆرد", icon: LayoutDashboard },
-    { href: "/dashboard/orders", label: "داواکاریەکان", icon: ClipboardList },
-  ];
-  const merchantRoles = ["restaurant", "supermarket", "produce_vendor", "meat_seafood_vendor"];
-  const roleLinks = role && merchantRoles.includes(role)
-    ? [{ href: "/dashboard/products", label: "بەرهەمەکان", icon: Boxes }]
-    : role === "customer"
-      ? [{ href: "/dashboard/addresses", label: "ناونیشانەکان", icon: Store }]
-      : role === "admin" || role === "super_admin"
-        ? [{ href: "/dashboard/delivery-zones", label: "ناوچەی گەیاندن", icon: MapPinned }]
-        : [];
+  const role = typeof rawRole === "string" && rawRole in labels
+    ? rawRole as DashboardRole
+    : null;
+  const displayName = typeof user.user_metadata?.full_name === "string"
+    ? user.user_metadata.full_name
+    : user.email ?? "بەکارهێنەر";
+  const identity = { name: displayName, email: user.email ?? null, role };
 
   return (
-    <div className="dashboard-shell">
-      <aside className="dashboard-sidebar">
-        <Link href="/" className="brand"><span className="brand-mark"><Store size={24} /></span><span className="brand-name">Shakh <b>Store</b></span></Link>
-        <nav className="dashboard-nav" aria-label="ڕێنمایی داشبۆرد">
-          {[...common, ...roleLinks].map(({ href, label, icon: Icon }, index) => (
-            <Link href={href} className={index === 0 ? "active" : ""} key={label}><Icon size={18} />{label}</Link>
-          ))}
-        </nav>
-        <div style={{ marginTop: "auto" }}><Link className="dashboard-nav-link" href="/"><ArrowUpLeft size={17} /> گەڕانەوە بۆ بازاڕ</Link></div>
-      </aside>
-      <main className="dashboard-main">
-        <div className="dashboard-topbar">
-          <div><p className="muted" style={{ margin: 0 }}>بەخێربێیت</p><h1>داشبۆرد</h1></div>
-          <SignOutButton />
-        </div>
-        <div className="dashboard-content">
-          <section className="dashboard-welcome">
-            <span className="role-badge">{roleLabel}</span>
-            <h2>سڵاو، {displayName}</h2>
-            <p>بەخێربێیت بۆ بەشی تایبەتی خۆت لە شاخ ستور.</p>
-          </section>
-          {!role ? (
-            <section className="dashboard-panel">
-              <h3>ڕۆڵی هەژمارەکەت هێشتا دیاری نەکراوە</h3>
-              <p>بۆ پاراستنی ئاسایش، بەکارهێنەر ناتوانێت خۆی ڕۆڵی ئەدمین، دوکاندار یان کاپتن دیاری بکات. تکایە چاوەڕێی پشکنین و دانانی ڕۆڵ لەلایەن بەڕێوەبەرەوە بکە.</p>
-            </section>
-          ) : role === "customer" ? (
-            <section className="dashboard-panel">
-              <h3>بەشی کڕیار</h3>
-              <p>داواکارییەکانت لە بەشی تایبەتی خۆت دەردەکەون. هەروەها دەتوانیت داواکاری بەشداریکردنی فرۆشگا بنێریت.</p>
-              <div className="dashboard-quick-links"><Link href="/search" className="text-link">گەڕان لە فرۆشگاکان <ArrowUpLeft size={17} /></Link><Link href="/cart" className="text-link">سەبەتە <ArrowUpLeft size={17} /></Link><Link href="/dashboard/addresses" className="text-link">ناونیشانەکان <ArrowUpLeft size={17} /></Link><Link href="/merchant/apply" className="text-link">داواکاری دوکانداری <ArrowUpLeft size={17} /></Link></div>
-            </section>
-          ) : (
-            <section className="dashboard-panel">
-              <h3>ئامرازەکانی {roleLabel}</h3>
-              <p>بنەمای دەسەڵات لە claim ـی پشتڕاستکراوی Supabase و RLS ـەوە وەردەگیرێت. لە قۆناغی ئێستادا دەتوانیت داواکاریەکانت ببینیت؛ مۆدیوولەکانی تر بە پێی قۆناغ زیاد دەکرێن.</p>
-              {(role === "restaurant" || role === "supermarket" || role === "produce_vendor" || role === "meat_seafood_vendor") && <Link href="/dashboard/products" className="text-link" style={{ marginTop: 14 }}>بەڕێوەبردنی بەرهەمەکان <ArrowUpLeft size={17} /></Link>}
-            </section>
-          )}
-          <section className="dashboard-panel">
-            <h3>دۆخی هەژمار</h3>
-            <p dir="ltr" style={{ textAlign: "right" }}>{user.email}</p>
-            <p className="muted">ناسنامەی هەژمار: <span dir="ltr">{user.id}</span></p>
-          </section>
-        </div>
-      </main>
-    </div>
+    <DashboardFrame
+      identity={identity}
+      title="پوختەی هەژمار"
+      subtitle="زانیاری و ئامرازەکانی هەژمارەکەت لە یەک شوێن."
+      activePath="/dashboard"
+    >
+      <section className="dashboard-welcome">
+        <span className="role-badge">{role ? labels[role] : "ڕۆڵ دیاری نەکراوە"}</span>
+        <h2>سڵاو، {displayName}</h2>
+        <p>بەخێربێیت بۆ بەشی تایبەتی خۆت لە شاخ ستور.</p>
+      </section>
+
+      {!role ? (
+        <section className="dashboard-panel">
+          <h3>ڕۆڵی هەژمارەکەت هێشتا دیاری نەکراوە</h3>
+          <p>بۆ پاراستنی ئاسایش، بەکارهێنەر ناتوانێت خۆی ڕۆڵی ئەدمین، دوکاندار یان کاپتن دیاری بکات. تکایە چاوەڕێی پشکنین و دانانی ڕۆڵ لەلایەن بەڕێوەبەرەوە بکە.</p>
+        </section>
+      ) : role === "customer" ? (
+        <section className="dashboard-shortcut-grid">
+          <Link href="/dashboard/orders" className="dashboard-shortcut">
+            <span><ClipboardList size={21} /></span><strong>داواکاریەکان</strong><small>شوێنکەوتنی داواکارییەکانت</small><ArrowUpLeft size={17} />
+          </Link>
+          <Link href="/dashboard/addresses" className="dashboard-shortcut">
+            <span><MapPinned size={21} /></span><strong>ناونیشانەکان</strong><small>بەڕێوەبردنی شوێنی گەیاندن</small><ArrowUpLeft size={17} />
+          </Link>
+          <Link href="/search" className="dashboard-shortcut">
+            <span><Store size={21} /></span><strong>گەڕان لە بازاڕ</strong><small>فرۆشگا و بەرهەمەکان ببینە</small><ArrowUpLeft size={17} />
+          </Link>
+          <Link href="/merchant/apply" className="dashboard-shortcut">
+            <span><Boxes size={21} /></span><strong>داواکاری دوکانداری</strong><small>فرۆشگاکەت لە شاخ ستور بەشدار بکە</small><ArrowUpLeft size={17} />
+          </Link>
+        </section>
+      ) : (
+        <section className="dashboard-panel">
+          <h3>ئامرازەکانی {labels[role]}</h3>
+          <p>دەستڕاگەیشتن بە پێی ڕۆڵی پشتڕاستکراوی Supabase و policy ـەکانی RLS سنووردارە.</p>
+          <div className="dashboard-quick-links">
+            <Link href="/dashboard/orders" className="text-link">بینینی داواکاریەکان <ArrowUpLeft size={17} /></Link>
+            {(role === "restaurant" || role === "supermarket" || role === "produce_vendor" || role === "meat_seafood_vendor") && (
+              <Link href="/dashboard/products" className="text-link">بەڕێوەبردنی بەرهەمەکان <ArrowUpLeft size={17} /></Link>
+            )}
+            {(role === "admin" || role === "super_admin") && (
+              <>
+                <Link href="/dashboard/merchant-applications" className="text-link">پشکنینی داواکاری فرۆشگا <ArrowUpLeft size={17} /></Link>
+                <Link href="/dashboard/delivery-zones" className="text-link">بەڕێوەبردنی ناوچەکان <ArrowUpLeft size={17} /></Link>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
+      <section className="dashboard-panel dashboard-account-panel">
+        <div><h3>زانیاری هەژمار</h3><p>ئیمەیڵی تۆمارکراو</p></div>
+        <strong dir="ltr">{user.email}</strong>
+      </section>
+    </DashboardFrame>
   );
 }

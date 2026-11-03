@@ -14,7 +14,7 @@ export function AddressBook({ userId, initialAddresses }: { userId: string; init
   const [label, setLabel] = useState("ماڵ");
   const [recipient, setRecipient] = useState("");
   const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("هەولێر");
+  const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
   const [line, setLine] = useState("");
   const [notes, setNotes] = useState("");
@@ -124,7 +124,7 @@ export function AddressBook({ userId, initialAddresses }: { userId: string; init
           <div className="merchant-field"><label htmlFor="address-label">ناوی ناونیشان</label><select id="address-label" value={label} onChange={e=>setLabel(e.target.value)}><option value="ماڵ">ماڵ</option><option value="کار">کار</option><option value="تر">تر</option></select></div>
           <div className="merchant-field"><label htmlFor="address-recipient">ناوی وەرگر *</label><input className="plain-field" id="address-recipient" required minLength={2} maxLength={120} value={recipient} onChange={e=>setRecipient(e.target.value)} /></div>
           <div className="merchant-field"><label htmlFor="address-phone">ژمارەی مۆبایل *</label><input className="plain-field" id="address-phone" type="tel" dir="ltr" required minLength={7} maxLength={32} value={phone} onChange={e=>setPhone(e.target.value)} /></div>
-          <div className="merchant-field"><label htmlFor="address-city">شار *</label><input className="plain-field" id="address-city" required minLength={2} maxLength={100} value={city} onChange={e=>setCity(e.target.value)} /></div>
+          <div className="merchant-field"><label htmlFor="address-city">شار *</label><input className="plain-field" id="address-city" required minLength={2} maxLength={100} value={city} onChange={e=>setCity(e.target.value)} placeholder="ناوی شار بە هەمان نووسین کە لە ناوچەکاندا تۆمار کراوە" /></div>
           <div className="merchant-field"><label htmlFor="address-district">گەڕەک *</label><input className="plain-field" id="address-district" required minLength={2} maxLength={120} value={district} onChange={e=>setDistrict(e.target.value)} /></div>
           <div className="merchant-field merchant-field-wide"><label htmlFor="address-line">ناونیشانی ورد *</label><input className="plain-field" id="address-line" required minLength={3} maxLength={300} value={line} onChange={e=>setLine(e.target.value)} placeholder="شەقام، کوچە، ژمارەی خانوو..." /></div>
           <div className="merchant-field merchant-field-wide"><label htmlFor="address-notes">تێبینی گەیاندن</label><textarea id="address-notes" rows={3} maxLength={500} value={notes} onChange={e=>setNotes(e.target.value)} /></div>
