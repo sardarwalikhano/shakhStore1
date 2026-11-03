@@ -49,7 +49,7 @@ export function CheckoutForm({ addresses, hasAnyActiveZone }: { addresses: Check
         p_address_id: selectedAddress.id,
         p_items: items.map(item=>({product_id:item.productId,quantity:item.quantity})),
         p_idempotency_key: idempotencyKey.current,
-        p_customer_note: note.trim() || null,
+        p_customer_note: note.trim() || undefined,
         p_payment_method: "cash_on_delivery",
       });
       if (orderError) throw orderError;
