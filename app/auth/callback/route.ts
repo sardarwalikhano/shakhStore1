@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const rawNext = searchParams.get("next") ?? "/dashboard";
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   if (!code || !url || !key) {
     return NextResponse.redirect(new URL("/login?error=callback", origin));
