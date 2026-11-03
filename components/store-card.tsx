@@ -20,7 +20,7 @@ export function StoreCard({ store }: { store: StoreCardData }) {
     : "فرۆشگا";
 
   return (
-    <Link href={\`/stores/\${store.slug}\`} className="store-card-link">
+    <Link href={"/stores/" + store.slug} className="store-card-link">
       <article className="store-card">
         <div className="store-art" aria-hidden="true">
           <Store size={34} strokeWidth={1.7} />
