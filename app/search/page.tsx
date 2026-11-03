@@ -24,7 +24,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     let query = supabase.from("stores")
       .select("id, name, slug, merchant_category, description, city, district")
       .eq("status", "active").eq("is_platform_store", false).order("name").limit(30);
-    if (q) query = query.ilike("name", \`%\${q.replace(/[%_]/g, "")}%\`);
+    if (q) query = query.ilike("name", "%" + q.replace(/[%_]/g, "") + "%");
     if (categoryMap[category]) query = query.eq("merchant_category", categoryMap[category]);
     const { data, error } = await query;
     if (data) stores = data;
