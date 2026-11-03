@@ -30,7 +30,7 @@ export default function ResetPasswordPage() {
         setUpdateMode(false);
       } else {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: \`\${window.location.origin}/auth/callback?next=/reset-password?mode=update\`,
+          redirectTo: window.location.origin + "/auth/callback?next=/reset-password?mode=update",
         });
         if (resetError) throw resetError;
         setSuccess("بەستەری گۆڕینی وشەی نهێنی بۆ ئیمەیڵەکەت نێردرا.");
