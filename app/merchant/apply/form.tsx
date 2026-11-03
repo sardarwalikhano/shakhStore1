@@ -28,7 +28,7 @@ export function MerchantApplicationForm() {
   const [success, setSuccess] = useState("");
 
   function normalizeSlug(value: string) {
-    return value.toLowerCase().trim().replace(/\\s+/g, "-").replace(/[^a-z0-9_-]/g, "");
+    return value.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "");
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
