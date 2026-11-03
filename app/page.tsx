@@ -67,7 +67,7 @@ export default async function HomePage() {
           </div>
           <div className="category-grid">
             {categories.map(({ slug, label, description, icon: Icon }) => (
-              <Link href={\`/search?category=\${slug}\`} className="category-card" key={slug}>
+              <Link href={"/search?category=" + slug} className="category-card" key={slug}>
                 <span className="category-icon"><Icon size={27} /></span>
                 <strong>{label}</strong>
                 <small>{description}</small>
