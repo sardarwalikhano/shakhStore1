@@ -126,3 +126,12 @@ Use the Supabase **Reset Password** email template with a link using `{{ .Confir
 - Captains can advance only their own assignment: `assigned → accepted → picked_up → on_the_way → delivered`. Pickup requires the merchant's ready-for-pickup state.
 - Every transition is checked and written in a database-side SECURITY DEFINER RPC with ownership/role checks and an append-only order status event. Parent order status is recalculated from its store-order rows.
 - Cancellation, refund, cash-on-delivery settlement, and wallet/commission settlement remain disabled pending separately approved business rules.
+
+
+## Customer order tracking
+
+- Customers can open a private order detail page from `/dashboard/orders`.
+- The page reads the order header, store-level statuses, delivery assignments, and status-event timeline using the authenticated Supabase session.
+- Existing participant RLS policies scope all four reads to the signed-in customer's own orders. No service-role access or new database write privileges are used.
+- The timeline intentionally displays status, actor category, and timestamp only; it does not expose internal actor IDs or operational notes.
+- Delivery tracking is status-based. Live GPS tracking is not enabled until a verified location-update workflow and consent/privacy requirements are in place.

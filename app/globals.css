@@ -366,3 +366,32 @@ img { max-width: 100%; }
 .delivery-assignment-controls select{min-height:38px;min-width:230px;max-width:100%;border:1px solid var(--color-border);border-radius:10px;padding:7px 10px;background:var(--color-surface);color:inherit}
 .delivery-assignment-action .form-error{margin:0;font-size:.8rem}
 .delivery-assignment-hint{font-size:.82rem;margin-top:10px;max-width:500px}
+
+
+/* Customer order tracking */
+.order-tracking-page{display:flex;flex-direction:column;gap:14px}
+.order-tracking-page>.auth-back{align-self:flex-start;margin:0}
+.tracking-summary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.tracking-summary h2{margin:7px 0;font-size:1.35rem}
+.tracking-total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--color-border);margin-top:18px;padding-top:15px}
+.tracking-total strong{font-size:1.2rem}
+.order-tracking-page .dashboard-panel h3{display:flex;align-items:center;gap:9px;margin-bottom:15px}
+.tracking-store-list{display:flex;flex-direction:column;gap:10px}
+.tracking-store{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 0;border-top:1px solid var(--color-border)}
+.tracking-store:first-child{border-top:0;padding-top:0}
+.tracking-store-status{display:flex;flex-direction:column;align-items:flex-end;gap:7px;text-align:end}
+.tracking-store-status .muted{display:flex;align-items:center;gap:5px;font-size:.82rem}
+.tracking-timeline{list-style:none;margin:0;padding:0 8px 0 0}
+.tracking-event{position:relative;display:flex;gap:14px;padding:0 0 22px}
+.tracking-event:not(:last-child):before{content:"";position:absolute;right:5px;top:14px;bottom:-1px;width:2px;background:var(--color-border)}
+.tracking-event-dot{position:relative;z-index:1;flex:0 0 12px;width:12px;height:12px;margin-top:5px;border-radius:50%;background:var(--color-primary);box-shadow:0 0 0 4px var(--color-primary-soft)}
+.tracking-event-content{display:flex;flex-direction:column;gap:3px}
+.tracking-event-content p,.tracking-event-content time{font-size:.83rem;margin:0;color:var(--color-text-secondary)}
+.tracking-address{display:flex;flex-direction:column;gap:5px}
+.tracking-address p{margin:0}
+.tracking-address a{align-self:flex-start}
+.tracking-money-list{display:flex;flex-direction:column;gap:9px;margin:0}
+.tracking-money-list>div{display:flex;justify-content:space-between;gap:14px}
+.tracking-money-list dt,.tracking-money-list dd{margin:0}
+.tracking-money-total{border-top:1px solid var(--color-border);padding-top:12px;margin-top:4px;font-weight:800}
+@media(max-width:640px){.tracking-store{align-items:flex-start;flex-direction:column}.tracking-store-status{align-items:flex-start;text-align:start}.tracking-summary-top{flex-direction:column}}

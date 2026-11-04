@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { OrderWorkflowAction } from "@/components/order-workflow-action";
@@ -159,7 +160,7 @@ export default async function OrdersPage() {
         ) : (
           <div className="table-wrap">
             <table className="data-table">
-              <thead><tr><th>ژمارەی داواکاری</th><th>دۆخ</th><th>پارەدان</th><th>کۆی گشتی</th><th>بەروار</th></tr></thead>
+              <thead><tr><th>ژمارەی داواکاری</th><th>دۆخ</th><th>پارەدان</th><th>کۆی گشتی</th><th>بەروار</th><th>وردەکاری</th></tr></thead>
               <tbody>{customerOrders.map((order) => (
                 <tr key={order.id}>
                   <td dir="ltr">{order.order_number}</td>
@@ -167,6 +168,7 @@ export default async function OrdersPage() {
                   <td>{paymentLabels[order.payment_status] ?? order.payment_status}</td>
                   <td>{order.total_iqd.toLocaleString("en-US")} {order.currency === "IQD" ? "دینار" : order.currency}</td>
                   <td>{new Date(order.created_at).toLocaleDateString("ckb-IQ")}</td>
+                  <td><Link href={`/dashboard/orders/${order.id}`} className="text-link">وردەکاری و بەدواداچوون</Link></td>
                 </tr>
               ))}</tbody>
             </table>
