@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { MapPinned, Truck } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { OrderWorkflowAction } from "@/components/order-workflow-action";
+import { DeliveryAssignmentAction, type CaptainOption } from "@/components/delivery-assignment-action";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const deliveryStatusLabels: Record<string, string> = {
@@ -53,6 +54,13 @@ export default async function DeliveriesPage() {
   }
 
   let queryError: string | null = null;
+  let availableCaptains: CaptainOption[] = [];
+
+  if (role === "admin" || role === "super_admin") {
+    const { data, error } = await supabase.rpc("admin_list_available_captains_v1");
+    if (error) queryError = error.message;
+    else availableCaptains = data ?? [];
+  }
   const assignmentQuery = supabase
     .from("delivery_assignments")
     .select("id, order_id, order_store_id, status, assigned_at, accepted_at, picked_up_at, delivered_at, created_at")
@@ -73,7 +81,7 @@ export default async function DeliveriesPage() {
     total_iqd: number;
     currency: string;
   }>();
-  let storeMap = new Map<string, string>();
+  let storeMap = new Map<string, { name: string; status: string }>();
 
   if (!queryError && orderIds.length > 0) {
     const { data: orders, error: ordersError } = await supabase
@@ -95,11 +103,11 @@ export default async function DeliveriesPage() {
   if (!queryError && orderStoreIds.length > 0) {
     const { data: stores, error: storesError } = await supabase
       .from("order_stores")
-      .select("id, store_name_snapshot")
+      .select("id, store_name_snapshot, status")
       .in("id", orderStoreIds);
 
     if (storesError) queryError = storesError.message;
-    else storeMap = new Map((stores ?? []).map((store) => [store.id, store.store_name_snapshot]));
+    else storeMap = new Map((stores ?? []).map((store) => [store.id, { name: store.store_name_snapshot, status: store.status }]));
   }
 
   const name = typeof user.user_metadata?.full_name === "string"
@@ -144,7 +152,15 @@ export default async function DeliveriesPage() {
                     <span className="status-pill">{deliveryStatusLabels[assignment.status] ?? assignment.status}</span>
                     {role === "captain" && <OrderWorkflowAction scope="captain" recordId={assignment.id} status={assignment.status} />}
                     <h3 dir="ltr">{order?.order_number ?? "—"}</h3>
-                    <p className="muted">{storeMap.get(assignment.order_store_id) ?? "فرۆشگا"}</p>
+                    <p className="muted">{storeMap.get(assignment.order_store_id)?.name ?? "فرۆشگا"}</p>
+                    {(role === "admin" || role === "super_admin") && (
+                      <DeliveryAssignmentAction
+                        assignmentId={assignment.id}
+                        assignmentStatus={assignment.status}
+                        storeStatus={storeMap.get(assignment.order_store_id)?.status}
+                        captains={availableCaptains}
+                      />
+                    )}
                   </div>
                   <strong>{order ? `${order.total_iqd.toLocaleString("en-US")} دینار` : "—"}</strong>
                 </div>

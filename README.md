@@ -122,7 +122,7 @@ Use the Supabase **Reset Password** email template with a link using `{{ .Confir
 - Captains have a dedicated `/dashboard/deliveries` read-only queue. Its RLS scope exposes only assignments where `captain_user_id = auth.uid()`; admin roles can audit all assignments.
 - The captain view exposes the delivery address snapshot and contact details only for assignments visible under the participant policy.
 - Merchant order transitions are: `placed → accepted → preparing → ready_for_pickup`. Only the owning merchant can advance its own store-order row.
-- Admins and super admins can assign only users whose trusted Auth `app_metadata.role` is `captain`, and only after the store-order is ready for pickup.
+- Admins and super admins can list verified, non-banned accounts with trusted Auth `app_metadata.role = captain`, then assign one only after the store-order is ready for pickup. The directory is exposed through an admin-checked RPC; it does not expose the Auth user list to customers or merchants.
 - Captains can advance only their own assignment: `assigned → accepted → picked_up → on_the_way → delivered`. Pickup requires the merchant's ready-for-pickup state.
 - Every transition is checked and written in a database-side SECURITY DEFINER RPC with ownership/role checks and an append-only order status event. Parent order status is recalculated from its store-order rows.
 - Cancellation, refund, cash-on-delivery settlement, and wallet/commission settlement remain disabled pending separately approved business rules.

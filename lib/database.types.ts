@@ -1300,6 +1300,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_available_captains_v1: {
+        Args: never
+        Returns: { email: string | null; full_name: string; user_id: string }[]
+      }
       admin_assign_delivery_captain_v1: {
         Args: { p_assignment_id: string; p_captain_user_id: string }
         Returns: Json

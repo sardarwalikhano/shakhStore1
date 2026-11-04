@@ -357,3 +357,12 @@ img { max-width: 100%; }
 .workflow-action{min-height:38px;padding:8px 13px;font-size:.82rem;white-space:nowrap}
 .workflow-action-wrap .form-error{font-size:.78rem;margin:0;max-width:240px}
 @media(max-width:760px){.workflow-action-wrap{min-width:125px}.workflow-action{white-space:normal}}
+
+
+/* Admin captain assignment */
+.delivery-assignment-action{display:flex;flex-direction:column;gap:7px;margin-top:12px;max-width:520px}
+.delivery-assignment-action label{font-size:.82rem;font-weight:700}
+.delivery-assignment-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.delivery-assignment-controls select{min-height:38px;min-width:230px;max-width:100%;border:1px solid var(--color-border);border-radius:10px;padding:7px 10px;background:var(--color-surface);color:inherit}
+.delivery-assignment-action .form-error{margin:0;font-size:.8rem}
+.delivery-assignment-hint{font-size:.82rem;margin-top:10px;max-width:500px}
