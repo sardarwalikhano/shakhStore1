@@ -128,3 +128,19 @@ test("subtotal ignores invalid line data defensively", () => {
     { unitPriceIqd: 100, quantity: 0 },
   ]), 200);
 });
+
+
+test("kg and liter quantities accept fractional defaults and unit-price is independent from quantity precision", () => {
+  const kg = getDefaultOrderRules("kg");
+  const liter = getDefaultOrderRules("liter");
+  assert.deepEqual(kg, { minOrderQuantity: 0.25, maxOrderQuantity: null, quantityStep: 0.05 });
+  assert.deepEqual(liter, { minOrderQuantity: 0.25, maxOrderQuantity: null, quantityStep: 0.05 });
+  assert.equal(normalizeCartQuantity("kg", 0.5, 2, kg.minOrderQuantity, kg.maxOrderQuantity, kg.quantityStep), 0.5);
+  assert.equal(normalizeCartQuantity("liter", 0.75, 2, liter.minOrderQuantity, liter.maxOrderQuantity, liter.quantityStep), 0.75);
+});
+
+test("grams and milliliters remain integer-based while kg and liter are fractional", () => {
+  assert.equal(normalizeCartQuantity("g", 150, 1000, 100, null, 50), 150);
+  assert.equal(normalizeCartQuantity("ml", 250, 1000, 100, null, 50), 250);
+  assert.equal(normalizeCartQuantity("g", 150.5, 1000, 100, null, 50), 150);
+});
