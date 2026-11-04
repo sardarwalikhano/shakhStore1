@@ -66,7 +66,7 @@ function PostEditor({ post, storeId }: { post?: PostRecord; storeId?: string | n
         <textarea id={`post-body-${suffix}`} name="body" required minLength={20} maxLength={30000} rows={8} defaultValue={post?.body ?? ""} />
       </div>
       <div className="merchant-field merchant-field-wide">
-        <label htmlFor={`post-cover-${suffix}`}>لینکی وێنەی سەرەکی (HTTPS)</label>
+        
         <input type="hidden" name="cover_image_url" value={coverUrl} />
         <label htmlFor={`post-cover-file-${suffix}`}>وێنەی پۆست (JPG، PNG، WEBP، AVIF تا ٥ MB)</label>
         <input ref={fileRef} id={`post-cover-file-${suffix}`} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>uploadCover(e.target.files?.[0])} />
