@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPostStatusTargets, isValidPostSlug } from "@/lib/post-rules";
+import { getMerchantCategoryForRole, getPostStatusTargets, isValidPostSlug } from "@/lib/post-rules";
 
 export type PostActionState = { status: "idle" | "success" | "error"; message: string };
 const initialState: PostActionState = { status: "idle", message: "" };
@@ -13,21 +13,59 @@ function value(formData: FormData, key: string): string {
   return typeof item === "string" ? item.trim() : "";
 }
 
-async function getAdminClient() {
+async function getPostActor() {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return { supabase: null, user: null, message: "پەیوەندی بە خزمەتگوزاری بەردەست نییە." };
+  if (!supabase) return { supabase: null, user: null, role: null, message: "پەیوەندی بە خزمەتگوزاری بەردەست نییە." } as const;
   const { data: { user } } = await supabase.auth.getUser();
-  const role = user?.app_metadata?.role;
-  if (!user || (role !== "admin" && role !== "super_admin")) {
-    return { supabase: null, user: null, message: "تەنها ئەدمین و سوپەر ئەدمین دەتوانن پۆست بەڕێوەببەن." };
+  const role = typeof user?.app_metadata?.role === "string" ? user.app_metadata.role : null;
+  const isPlatformManager = role === "admin" || role === "super_admin";
+  const isMerchant = getMerchantCategoryForRole(role) !== null;
+  if (!user || (!isPlatformManager && !isMerchant)) {
+    return { supabase: null, user: null, role: null, message: "ئەم کردارە بۆ ڕۆڵی هەژمارەکەت ڕێگەپێدراو نییە." } as const;
   }
-  return { supabase, user, message: "" };
+  return { supabase, user, role, message: "" } as const;
+}
+
+async function findOwnedActiveStore(
+  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  userId: string,
+  role: string,
+  storeId: string,
+) {
+  const category = getMerchantCategoryForRole(role);
+  if (!category || !uuidPattern.test(storeId)) return null;
+  const { data, error } = await supabase.from("stores")
+    .select("id,name,merchant_category,status")
+    .eq("id", storeId)
+    .eq("owner_id", userId)
+    .eq("merchant_category", category)
+    .eq("is_platform_store", false)
+    .eq("status", "active")
+    .maybeSingle();
+  return error ? null : data;
 }
 
 function databaseMessage(message: string): string {
   if (message.includes("posts_slug_key") || message.includes("duplicate key")) return "ئەم Slug ـە پێشتر بەکارهاتووە؛ Slug ـێکی تر هەڵبژێرە.";
-  if (message.includes("row-level security")) return "دەسەڵاتی بەڕێوەبردنی پۆستت پشتڕاست نەکراوە.";
+  if (message.includes("row-level security") || message.includes("POST_AUTHOR_ROLE_REQUIRED")) return "دەسەڵاتی پۆستکردنت بۆ ئەم فرۆشگایە پشتڕاست نەکراوە.";
   return "پاشەکەوتکردنی پۆست سەرکەوتوو نەبوو؛ زانیارییەکان پشکنە.";
+}
+
+async function canManageExistingPost(
+  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  userId: string,
+  role: string,
+  postId: string,
+) {
+  const { data: post, error } = await supabase.from("posts")
+    .select("id,author_user_id,store_id,status,slug")
+    .eq("id", postId)
+    .maybeSingle();
+  if (error || !post) return null;
+  if (role === "admin" || role === "super_admin") return post;
+  if (post.author_user_id !== userId || !post.store_id) return null;
+  const store = await findOwnedActiveStore(supabase, userId, role, post.store_id);
+  return store ? post : null;
 }
 
 export async function savePostAction(
@@ -57,21 +95,32 @@ export async function savePostAction(
     }
   }
 
-  const auth = await getAdminClient();
-  if (!auth.supabase || !auth.user) return { status: "error", message: auth.message };
-  const supabase = auth.supabase;
+  const auth = await getPostActor();
+  if (!auth.supabase || !auth.user || !auth.role) return { status: "error", message: auth.message };
+  const { supabase, user, role } = auth;
+  const isPlatformManager = role === "admin" || role === "super_admin";
 
   if (postId) {
     if (!uuidPattern.test(postId)) return { status: "error", message: "ناسنامەی پۆست دروست نییە." };
+    const existing = await canManageExistingPost(supabase, user.id, role, postId);
+    if (!existing) return { status: "error", message: "تەنها دەتوانیت پۆستی خۆت یان پۆستی پلاتفۆرم دەستکاری بکەیت." };
     const { error } = await supabase.from("posts").update({
       title, slug, excerpt, body, cover_image_url: coverImageUrl,
     }).eq("id", postId);
     if (error) return { status: "error", message: databaseMessage(error.message) };
   } else {
+    let storeId: string | null = null;
+    if (!isPlatformManager) {
+      storeId = value(formData, "store_id");
+      const store = await findOwnedActiveStore(supabase, user.id, role, storeId);
+      if (!store) return { status: "error", message: "فرۆشگای چالاک و هاوتای ڕۆڵەکەت نەدۆزرایەوە." };
+    }
     const { error } = await supabase.from("posts").insert({
-      author_user_id: auth.user.id,
+      author_user_id: user.id,
+      store_id: storeId,
       title, slug, excerpt, body, cover_image_url: coverImageUrl,
       status: "draft",
+      published_at: null,
     });
     if (error) return { status: "error", message: databaseMessage(error.message) };
   }
@@ -91,18 +140,15 @@ export async function updatePostStatusAction(
   if (!uuidPattern.test(postId)) return { status: "error", message: "ناسنامەی پۆست دروست نییە." };
   if (!["draft", "published", "archived"].includes(newStatus)) return { status: "error", message: "دۆخی پۆست دروست نییە." };
 
-  const auth = await getAdminClient();
-  if (!auth.supabase) return { status: "error", message: auth.message };
-  const supabase = auth.supabase;
-
-  const { data: post, error: readError } = await supabase.from("posts")
-    .select("status,slug").eq("id", postId).maybeSingle();
-  if (readError || !post) return { status: "error", message: "پۆست نەدۆزرایەوە." };
+  const auth = await getPostActor();
+  if (!auth.supabase || !auth.user || !auth.role) return { status: "error", message: auth.message };
+  const post = await canManageExistingPost(auth.supabase, auth.user.id, auth.role, postId);
+  if (!post) return { status: "error", message: "تەنها دەتوانیت دۆخی پۆستی خۆت بگۆڕیت." };
   if (!getPostStatusTargets(post.status).includes(newStatus as "draft" | "published" | "archived")) {
     return { status: "error", message: "ئەم گۆڕانکارییە لە ڕێڕەوی پۆستدا ڕێگەپێدراو نییە." };
   }
 
-  const { error } = await supabase.from("posts").update({
+  const { error } = await auth.supabase.from("posts").update({
     status: newStatus,
     published_at: newStatus === "published" ? new Date().toISOString() : null,
   }).eq("id", postId);
