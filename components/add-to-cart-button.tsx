@@ -7,7 +7,8 @@ import { useCart, type CartProductInput } from "@/components/cart-provider";
 export function AddToCartButton({ product }: { product: CartProductInput }) {
   const { addItem, hydrated } = useCart();
   const [added, setAdded] = useState(false);
-  const unavailable = product.stockQuantity !== null && product.stockQuantity <= 0;
+  const unavailable = product.stockQuantity !== null
+    && product.stockQuantity < product.minOrderQuantity;
 
   function add() {
     if (!hydrated || unavailable) return;
@@ -28,7 +29,7 @@ export function AddToCartButton({ product }: { product: CartProductInput }) {
       {!hydrated
         ? "سەبەتە ئامادە دەبێت..."
         : unavailable
-          ? "لە کۆگا نەماوە"
+          ? "لە کۆگا بڕی پێویست نییە"
           : added
             ? "زیادکرا بۆ سەبەتە"
             : "زیادکردن بۆ سەبەتە"}
