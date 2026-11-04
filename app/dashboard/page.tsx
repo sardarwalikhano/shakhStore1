@@ -87,7 +87,10 @@ export default async function DashboardPage() {
           <div className="dashboard-quick-links">
             <Link href="/dashboard/orders" className="text-link">بینینی داواکاریەکان <ArrowUpLeft size={17} /></Link>
             {(role === "restaurant" || role === "supermarket" || role === "produce_vendor" || role === "meat_seafood_vendor") && (
-              <Link href="/dashboard/products" className="text-link">بەڕێوەبردنی بەرهەمەکان <ArrowUpLeft size={17} /></Link>
+              <>
+                <Link href="/dashboard/products" className="text-link">بەڕێوەبردنی بەرهەمەکان <ArrowUpLeft size={17} /></Link>
+                <Link href="/dashboard/posts" className="text-link">پۆستکردنی فرۆشگا <ArrowUpLeft size={17} /></Link>
+              </>
             )}
             {(role === "admin" || role === "super_admin") && (
               <>
