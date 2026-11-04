@@ -77,20 +77,15 @@ export function ProductCreateForm({
   const [quantityStep, setQuantityStep] = useState(String(getDefaultOrderRules(initialUnit).quantityStep));
   const [imageFile, setImageFile] = useState<File | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const imagePreviewUrlRef = useRef<string | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    if (!imageFile) {
-      setImagePreview("");
-      return;
-    }
-    const objectUrl = URL.createObjectURL(imageFile);
-    setImagePreview(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [imageFile]);
+  useEffect(() => () => {
+    if (imagePreviewUrlRef.current) URL.revokeObjectURL(imagePreviewUrlRef.current);
+  }, []);
 
   function changeUnit(nextUnit: string) {
     setUnit(nextUnit);
@@ -101,16 +96,23 @@ export function ProductCreateForm({
     setStock("");
   }
 
+  function clearSelectedImage() {
+    if (imagePreviewUrlRef.current) URL.revokeObjectURL(imagePreviewUrlRef.current);
+    imagePreviewUrlRef.current = null;
+    setImagePreview("");
+    setImageFile(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  }
+
   function chooseImage(event: ChangeEvent<HTMLInputElement>) {
     setError("");
     const selected = event.target.files?.[0] ?? null;
     if (!selected) {
-      setImageFile(null);
+      clearSelectedImage();
       return;
     }
     if (!imageExtensions[selected.type]) {
-      setImageFile(null);
-      event.target.value = "";
+      clearSelectedImage();
       setError("تەنها وێنەی JPG، PNG، WEBP یان AVIF پەسەند دەکرێت.");
       return;
     }
@@ -120,6 +122,10 @@ export function ProductCreateForm({
       setError("قەبارەی وێنە نابێت لە ٥ مێگابایت زیاتر بێت.");
       return;
     }
+    if (imagePreviewUrlRef.current) URL.revokeObjectURL(imagePreviewUrlRef.current);
+    const previewUrl = URL.createObjectURL(selected);
+    imagePreviewUrlRef.current = previewUrl;
+    setImagePreview(previewUrl);
     setImageFile(selected);
   }
 
@@ -211,8 +217,7 @@ export function ProductCreateForm({
       setCompareAtPrice("");
       setStock("");
       setCategoryId("");
-      setImageFile(null);
-      if (imageInputRef.current) imageInputRef.current.value = "";
+      clearSelectedImage();
       changeUnit(initialUnit);
       setSuccess("بەرهەم و وێنەکە بە سەرکەوتوویی پاشەکەوت کران؛ بەرهەمەکە وەک ڕەشنووس چاوەڕێی پشکنینی بەڕێوەبەر دەکات.");
       router.refresh();
@@ -240,7 +245,7 @@ export function ProductCreateForm({
             {imagePreview ? (
               <div className="product-image-preview">
                 <img src={imagePreview} alt="پێشبینینی وێنەی بەرهەم" />
-                <button type="button" className="product-image-remove" onClick={() => { setImageFile(null); if (imageInputRef.current) imageInputRef.current.value = ""; }} aria-label="سڕینەوەی وێنە"><X size={17} /></button>
+                <button type="button" className="product-image-remove" onClick={clearSelectedImage} aria-label="سڕینەوەی وێنە"><X size={17} /></button>
               </div>
             ) : (
               <label className="product-image-dropzone" htmlFor="product-image">
