@@ -98,7 +98,7 @@ export function PostsManager({
         <p>{mode === "merchant"
           ? "پۆستەکانت تەنها بە ناوی ئەم فرۆشگایە بڵاودەبنەوە؛ پۆستی فرۆشگا و پلاتفۆرم لە یەکتر جیاوازن."
           : "پۆستەکانی ئەم بەشە بە ناوی شاخ ستور بڵاودەبنەوە."}</p>
-        <div className="dashboard-welcome-actions">
+        <div className="dashboard-welcome-actions post-create-toolbar">
           <a href="#new-post-editor" className="button"><Plus size={18} /> دروستکردنی پۆستی نوێ</a>
         </div>
       </section>
