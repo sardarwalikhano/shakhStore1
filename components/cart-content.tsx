@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart, type CartLine } from "@/components/cart-provider";
-import { getUnitLabelCkb } from "@/lib/marketplace-rules";
+import { getUnitLabelCkb, normalizeCartQuantity } from "@/lib/marketplace-rules";
 
 function money(value: number) {
   return value.toLocaleString("en-US") + " دینار";
@@ -48,8 +48,18 @@ function ProductQuantityControl({
         onChange={event => setDraft(event.target.value)}
         onBlur={() => {
           const requested = Number(draft);
-          if (!draft.trim() || !Number.isFinite(requested)) setDraft(String(item.quantity));
-          else setQuantity(item.productId, requested);
+          const normalized = draft.trim()
+            ? normalizeCartQuantity(
+                item.unit, requested, item.stockQuantity,
+                item.minOrderQuantity, item.maxOrderQuantity, item.quantityStep,
+              )
+            : null;
+          if (normalized === null) {
+            setDraft(String(item.quantity));
+            return;
+          }
+          setQuantity(item.productId, normalized);
+          setDraft(String(normalized));
         }}
       />
       <button
