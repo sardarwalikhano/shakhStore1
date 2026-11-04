@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Archive, FileText, Pencil, RotateCcw, Send } from "lucide-react";
+import { Archive, FileText, Pencil, Plus, RotateCcw, Send } from "lucide-react";
 import { savePostAction, updatePostStatusAction, type PostActionState } from "@/app/dashboard/posts/actions";
 import { getPostStatusLabel, getPostStatusTargets, type PostStatus } from "@/lib/post-rules";
 
@@ -34,7 +34,7 @@ function StatusForm({ post }: { post: PostRecord }) {
       </select>
       <button type="submit" className="button" disabled={pending}>
         {post.status === "archived" ? <RotateCcw size={16} /> : post.status === "published" ? <Archive size={16} /> : <Send size={16} />}
-        {pending ? "..." : "جێبەجێکردن"}
+        {pending ? "چاوەڕێ بکە..." : post.status === "draft" ? "بڵاوکردنەوەی پۆست" : post.status === "published" ? "گۆڕینی دۆخی پۆست" : "گەڕاندنەوەی پۆست"}
       </button>
       {state.message && <p className={state.status === "success" ? "form-success" : "form-error"} role={state.status === "success" ? "status" : "alert"}>{state.message}</p>}
     </form>
@@ -45,7 +45,7 @@ function PostEditor({ post, storeId }: { post?: PostRecord; storeId?: string | n
   const [state, formAction, pending] = useActionState(savePostAction, initialState);
   const suffix = post?.id ?? "new";
   return (
-    <form action={formAction} className="merchant-form post-editor-form">
+    <form id={!post ? "new-post-editor" : undefined} action={formAction} className="merchant-form post-editor-form">
       {post && <input type="hidden" name="post_id" value={post.id} />}
       {!post && storeId && <input type="hidden" name="store_id" value={storeId} />}
       <div className="merchant-field">
@@ -98,6 +98,9 @@ export function PostsManager({
         <p>{mode === "merchant"
           ? "پۆستەکانت تەنها بە ناوی ئەم فرۆشگایە بڵاودەبنەوە؛ پۆستی فرۆشگا و پلاتفۆرم لە یەکتر جیاوازن."
           : "پۆستەکانی ئەم بەشە بە ناوی شاخ ستور بڵاودەبنەوە."}</p>
+        <div className="dashboard-welcome-actions">
+          <a href="#new-post-editor" className="button"><Plus size={18} /> دروستکردنی پۆستی نوێ</a>
+        </div>
       </section>
       <section className="dashboard-panel">
         <h3>دروستکردنی پۆستی نوێ</h3>
