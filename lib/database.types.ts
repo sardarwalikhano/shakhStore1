@@ -804,6 +804,60 @@ export type Database = {
           },
         ]
       }
+      product_moderation_events: {
+        Row: {
+          actor_role: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          new_status: string
+          previous_status: string
+          product_id: string
+          reason: string
+          reviewed_updated_at: string
+          store_id: string
+        }
+        Insert: {
+          actor_role: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          new_status: string
+          previous_status: string
+          product_id: string
+          reason: string
+          reviewed_updated_at: string
+          store_id: string
+        }
+        Update: {
+          actor_role?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          new_status?: string
+          previous_status?: string
+          product_id?: string
+          reason?: string
+          reviewed_updated_at?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_moderation_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_moderation_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string | null
@@ -1263,6 +1317,27 @@ export type Database = {
       }
     }
     Functions: {
+      admin_assign_delivery_captain_v1: {
+        Args: { p_assignment_id: string; p_captain_user_id: string }
+        Returns: Json
+      }
+      admin_list_available_captains_v1: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          user_id: string
+        }[]
+      }
+      admin_set_product_status_v1: {
+        Args: {
+          p_expected_updated_at: string
+          p_new_status: string
+          p_product_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       approve_merchant_application: {
         Args: {
           p_application_id: string
@@ -1290,6 +1365,10 @@ export type Database = {
         }
         Returns: number
       }
+      captain_update_delivery_status_v1: {
+        Args: { p_assignment_id: string; p_new_status: string; p_note?: string }
+        Returns: Json
+      }
       create_order_v1: {
         Args: {
           p_address_id: string
@@ -1300,23 +1379,7 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_list_available_captains_v1: {
-        Args: never
-        Returns: { email: string | null; full_name: string; user_id: string }[]
-      }
-      admin_assign_delivery_captain_v1: {
-        Args: { p_assignment_id: string; p_captain_user_id: string }
-        Returns: Json
-      }
-      captain_update_delivery_status_v1: {
-        Args: { p_assignment_id: string; p_new_status: string; p_note?: string | null }
-        Returns: Json
-      }
       current_app_role: { Args: never; Returns: string }
-      merchant_update_order_store_status_v1: {
-        Args: { p_order_store_id: string; p_new_status: string; p_note?: string | null }
-        Returns: Json
-      }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
       manage_delivery_zone_v1: {
         Args: {
@@ -1351,6 +1414,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      merchant_update_order_store_status_v1: {
+        Args: {
+          p_new_status: string
+          p_note?: string
+          p_order_store_id: string
+        }
+        Returns: Json
       }
       moderate_merchant_store: {
         Args: {

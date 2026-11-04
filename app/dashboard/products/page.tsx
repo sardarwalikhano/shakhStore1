@@ -33,11 +33,15 @@ export default async function ProductsDashboardPage() {
     );
   }
 
-  const [storeResult] = await Promise.all([
+  const [storeResult, categoriesResult] = await Promise.all([
     supabase.from("stores")
       .select("id, name, slug, merchant_category, status")
       .eq("owner_id", user.id).eq("is_platform_store", false)
       .order("created_at", { ascending: false }).limit(5),
+    supabase.from("catalog_categories")
+      .select("id, name_ckb")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
   ]);
   const store = storeResult.data?.[0] ?? null;
   const productsResult = store
@@ -46,6 +50,7 @@ export default async function ProductsDashboardPage() {
         .eq("store_id", store.id).order("created_at", { ascending: false }).limit(100)
     : null;
   const products = productsResult?.data ?? [];
+  const categories = categoriesResult.data ?? [];
 
   return (
     <DashboardFrame
@@ -64,6 +69,8 @@ export default async function ProductsDashboardPage() {
         <div className="empty-state"><Store size={30} color="#d96b24" /><strong>فرۆشگای پەسەندکراوت نییە</strong><span className="muted">پێش زیادکردنی بەرهەم، داواکاری دوکانداری بنێرە و چاوەڕێی پەسەندکردن بکە.</span></div>
       ) : store.status !== "active" ? (
         <div className="empty-state"><strong>فرۆشگاکەت هێشتا چالاک نییە</strong><span className="muted">دۆخی ئێستا: {store.status}. توانای بڵاوکردنەوەی بەرهەم تا چالاککردن ناچالاکە.</span></div>
+      ) : categoriesResult.error ? (
+        <div className="empty-state"><strong>نەتوانرا پۆلەکانی بەرهەم بخوێندرێنەوە</strong></div>
       ) : (
         <>
           <section className="dashboard-welcome">
@@ -71,7 +78,11 @@ export default async function ProductsDashboardPage() {
             <h2>{store.name}</h2>
             <p>بەرهەمەکانت بۆ ئەم فرۆشگایە زیاد بکە.</p>
           </section>
-          <ProductCreateForm storeId={store.id} />
+          {categories.length === 0 ? (
+            <div className="empty-state"><strong>هیچ پۆلێکی چالاک نییە</strong><span className="muted">پێویستە بەڕێوەبەر پۆلی بەرهەم چالاک بکات.</span></div>
+          ) : (
+            <ProductCreateForm storeId={store.id} categories={categories} />
+          )}
           {productsResult?.error ? (
             <div className="empty-state"><strong>هەڵە لە خوێندنەوەی بەرهەمەکان</strong></div>
           ) : products.length === 0 ? (

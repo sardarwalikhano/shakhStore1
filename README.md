@@ -115,6 +115,17 @@ Keep email confirmation enabled. Keep Resend click/open tracking disabled for au
 Use the Supabase **Reset Password** email template with a link using `{{ .ConfirmationURL }}`. The app requests a redirect to `/auth/callback`, then sends the user to `/reset-password?mode=update` after the PKCE session is established.
 
 
+## Product moderation
+
+- Merchants create products as drafts and must select an active catalog category.
+- Product status is not writable by merchant browser clients. Admin and super-admin publication uses the `admin_set_product_status_v1` RPC.
+- Publishing requires an active store, positive price, an available product, and an active catalog category. Archived products must return to draft before publication.
+- Every moderation decision is recorded in the append-only `product_moderation_events` audit table with actor role, transition, reason, and reviewed product version.
+- The audit table is readable by admins and super admins; direct client insert, update, and delete privileges are not granted.
+- The admin review page is available at `/dashboard/product-moderation`.
+
+Migration sources `20261104103925_grant_merchant_application_insert_authenticated` and `20261104105234_admin_product_publication_workflow` reconcile the linked project's recorded migration history. Both versions are already applied remotely; do not re-apply them to the linked production project.
+
 ## Order and delivery operations
 
 - The customer order list reads order headers under the existing participant RLS policy.
