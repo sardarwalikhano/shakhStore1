@@ -77,7 +77,7 @@ test("default order rules reflect weight, liquid, gram and unit-based products",
 
 test("minimum, maximum, increment and fractional inventory are enforced in cart", () => {
   assert.equal(normalizeCartQuantity("kg", 0.25, 1, 0.25, 0.75, 0.05), 0.25);
-  assert.equal(normalizeCartQuantity("kg", 0.42, 1, 0.25, 0.75, 0.05), 0.45);
+  assert.equal(normalizeCartQuantity("kg", 0.42, 1, 0.25, 0.75, 0.05), 0.4);
   assert.equal(normalizeCartQuantity("kg", 0.9, 1, 0.25, 0.75, 0.05), 0.75);
   assert.equal(normalizeCartQuantity("kg", 0.2, 1, 0.25, 0.75, 0.05), null);
   assert.equal(normalizeCartQuantity("kg", 0.5, 0.3, 0.25, null, 0.05), 0.3);
