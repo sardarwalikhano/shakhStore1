@@ -60,7 +60,7 @@ export default async function DashboardPostsPage() {
   }
 
   let postsQuery = supabase.from("posts")
-    .select("id,title,slug,excerpt,body,cover_image_url,status,published_at,store_id,updated_at")
+    .select("id,title,slug,category,excerpt,body,cover_image_url,status,published_at,store_id,updated_at")
     .order("updated_at", { ascending: false })
     .limit(100);
   if (!platformManager && store) postsQuery = postsQuery.eq("store_id", store.id);
