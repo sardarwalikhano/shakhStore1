@@ -4,6 +4,7 @@ import {
   getActorLabel,
   getAddressLine,
   getDeliveryStatusLabel,
+  getEventStatusLabel,
   getOrderStatusLabel,
   getPaymentStatusLabel,
   getSafeSnapshotText,
@@ -51,4 +52,11 @@ test("safe snapshot text ignores empty and non-string values", () => {
   assert.equal(getSafeSnapshotText("  بەردەڕەش "), "بەردەڕەش");
   assert.equal(getSafeSnapshotText("   "), null);
   assert.equal(getSafeSnapshotText(123), null);
+});
+
+test("timeline events use status labels that match the actor workflow", () => {
+  assert.equal(getEventStatusLabel("assigned", "admin"), "کاپتن دیاریکراوە");
+  assert.equal(getEventStatusLabel("accepted", "captain"), "کاپتن گەیاندنی پەسەند کردووە");
+  assert.equal(getEventStatusLabel("accepted", "restaurant"), "پەسەندکراوە");
+  assert.equal(getEventStatusLabel("out_for_delivery", "admin"), "لە ڕێگای گەیاندندایە");
 });

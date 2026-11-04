@@ -66,6 +66,23 @@ export function getDeliveryStatusLabel(status: string): string {
   return deliveryStatusLabels[status] ?? status;
 }
 
+export function getEventStatusLabel(status: string, actorRole: string | null): string {
+  if (status === "assigned" || actorRole === "captain") {
+    return deliveryStatusLabels[status] ?? getOrderStatusLabel(status);
+  }
+
+  if (
+    actorRole === "restaurant" ||
+    actorRole === "supermarket" ||
+    actorRole === "produce_vendor" ||
+    actorRole === "meat_seafood_vendor"
+  ) {
+    return storeStatusLabels[status] ?? getOrderStatusLabel(status);
+  }
+
+  return getOrderStatusLabel(status);
+}
+
 export function getPaymentStatusLabel(status: string): string {
   return paymentStatusLabels[status] ?? status;
 }

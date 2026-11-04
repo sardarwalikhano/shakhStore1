@@ -7,6 +7,7 @@ import {
   getActorLabel,
   getAddressLine,
   getDeliveryStatusLabel,
+  getEventStatusLabel,
   getOrderStatusLabel,
   getPaymentStatusLabel,
   getSafeSnapshotText,
@@ -166,7 +167,7 @@ export default async function CustomerOrderTrackingPage({ params }: Props) {
                     <li key={event.id} className="tracking-event">
                       <span className="tracking-event-dot" />
                       <div className="tracking-event-content">
-                        <strong>{getOrderStatusLabel(event.new_status)}</strong>
+                        <strong>{getEventStatusLabel(event.new_status, event.actor_role)}</strong>
                         <p className="muted">
                           {getActorLabel(event.actor_role)}
                           {event.order_store_id && storeNames.has(event.order_store_id)
