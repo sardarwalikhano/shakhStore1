@@ -13,7 +13,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
   if (!supabase) notFound();
 
   const { data: post, error } = await supabase.from("posts")
-    .select("title,slug,excerpt,body,published_at")
+    .select("title,slug,excerpt,body,published_at,store_id")
     .eq("slug", slug)
     .eq("status", "published")
     .not("published_at", "is", null)
@@ -22,13 +22,20 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
   if (error || !post) notFound();
 
+  let publisher = "شاخ ستور";
+  if (post.store_id) {
+    const { data: store } = await supabase.from("stores")
+      .select("id,name").eq("id", post.store_id).maybeSingle();
+    publisher = store?.name ?? "فرۆشگا";
+  }
+
   return (
     <>
       <SiteHeader />
       <main className="container section public-post-detail">
         <Link href="/posts" className="auth-back"><ArrowRight size={17} /> گەڕانەوە بۆ پۆستەکان</Link>
         <article className="post-article">
-          <span className="eyebrow"><FileText size={15} /> شاخ ستور</span>
+          <span className="eyebrow"><FileText size={15} /> {publisher}</span>
           <h1>{post.title}</h1>
           {post.published_at && <time dateTime={post.published_at}>{new Date(post.published_at).toLocaleDateString("ckb-IQ", { dateStyle: "long" })}</time>}
           <p className="post-article-excerpt">{post.excerpt}</p>
