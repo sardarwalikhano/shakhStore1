@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { StoreCard } from "@/components/store-card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/database.types";
+import { getUnitLabelCkb } from "@/lib/marketplace-rules";
 
 type StoreCardData = Pick<
   Tables<"stores">,
@@ -156,7 +157,7 @@ export default async function SearchPage({
                       <div>
                         <h3>{product.name}</h3>
                         <p>{product.description || " "}</p>
-                        <strong>{money(product.price_iqd)} <small>/ {product.unit}</small></strong>{product.compare_at_price_iqd !== null ? <del>{money(product.compare_at_price_iqd)}</del> : null}<small className="muted">کەمترین داواکاری: {product.min_order_quantity} {product.unit}{product.max_order_quantity !== null ? " · زۆرترین: " + product.max_order_quantity : ""}</small>
+                        <strong>{money(product.price_iqd)} <small>/ {getUnitLabelCkb(product.unit)}</small></strong>{product.compare_at_price_iqd !== null ? <del>{money(product.compare_at_price_iqd)}</del> : null}<small className="muted">کەمترین داواکاری: {product.min_order_quantity} {getUnitLabelCkb(product.unit)}{product.max_order_quantity !== null ? " · زۆرترین: " + product.max_order_quantity : ""}</small>
                       </div>
                       <AddToCartButton product={{
                         productId: product.id,
