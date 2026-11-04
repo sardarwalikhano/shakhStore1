@@ -100,20 +100,6 @@ function PostEditor({ post, storeId, mode }: { post?: PostRecord; storeId?: stri
           <option value="supermarket">سوپەرمارکێت</option>
         </select>
       </div>
-      <div className="merchant-field">
-        <label htmlFor={`post-category-${suffix}`}>کاتەگۆری *</label>
-        <select id={`post-category-${suffix}`} name="category" defaultValue={post?.category ?? "general"} required>
-          <option value="general">General</option>
-          <option value="offers">Offers</option>
-          <option value="products">Products</option>
-          <option value="news">News</option>
-          <option value="announcements">Announcements</option>
-          <option value="food">Food</option>
-          <option value="meat">Meat</option>
-          <option value="produce">Produce</option>
-          <option value="supermarket">Supermarket</option>
-        </select>
-      </div>
       <div className="merchant-field merchant-field-wide">
         <label htmlFor={`post-excerpt-${suffix}`}>پوختە *</label>
         <textarea id={`post-excerpt-${suffix}`} name="excerpt" required minLength={10} maxLength={360} rows={2} defaultValue={post?.excerpt ?? ""} />
@@ -177,6 +163,7 @@ export function PostsManager({
           <div className="posts-list">
             {posts.map((post) => (
               <article className="post-admin-card" key={post.id}>
+                {post.cover_image_url && <img src={post.cover_image_url} alt={post.title} className="post-admin-card-cover" loading="lazy" />}
                 <div className="post-admin-card-heading">
                   <div>
                     <span className="role-badge">{getPostStatusLabel(post.status)}</span>
