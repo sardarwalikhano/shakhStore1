@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, LockKeyhole, Mail, ShoppingBag } from "lucide-react";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
@@ -14,6 +14,28 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    async function checkSession() {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!active) return;
+        if (user) {
+          router.replace("/dashboard");
+          router.refresh();
+          return;
+        }
+      } catch {
+        // Render the login form if session lookup is temporarily unavailable.
+      }
+      if (active) setCheckingSession(false);
+    }
+    void checkSession();
+    return () => { active = false; };
+  }, [router]);
 
   const callbackError = searchParams.get("error");
   const feedbackError =
@@ -48,6 +70,10 @@ function LoginContent() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (checkingSession) {
+    return <main className="auth-shell"><section className="auth-card">پشکنینی هەژمار...</section></main>;
   }
 
   return (
