@@ -45,7 +45,7 @@ function isCartLine(value: unknown): value is CartLine {
     && typeof item.storeSlug === "string"
     && typeof item.storeName === "string"
     && typeof item.productName === "string"
-    && (item.imageUrl === null || typeof item.imageUrl === "string");
+    && (item.imageUrl === undefined || item.imageUrl === null || typeof item.imageUrl === "string");
 }
 
 function withPurchaseDefaults(item: CartLine): CartLine {
