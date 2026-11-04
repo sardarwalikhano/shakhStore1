@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { MapPinned, Truck } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
+import { OrderWorkflowAction } from "@/components/order-workflow-action";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const deliveryStatusLabels: Record<string, string> = {
@@ -141,6 +142,7 @@ export default async function DeliveriesPage() {
                 <div className="dashboard-topbar">
                   <div>
                     <span className="status-pill">{deliveryStatusLabels[assignment.status] ?? assignment.status}</span>
+                    {role === "captain" && <OrderWorkflowAction scope="captain" recordId={assignment.id} status={assignment.status} />}
                     <h3 dir="ltr">{order?.order_number ?? "—"}</h3>
                     <p className="muted">{storeMap.get(assignment.order_store_id) ?? "فرۆشگا"}</p>
                   </div>

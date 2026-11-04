@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
+import { OrderWorkflowAction } from "@/components/order-workflow-action";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const orderStatusLabels: Record<string, string> = {
@@ -138,7 +139,7 @@ export default async function OrdersPage() {
         ) : (
           <div className="table-wrap">
             <table className="data-table">
-              <thead><tr><th>ژمارەی داواکاری</th><th>فرۆشگا</th><th>دۆخی فرۆشگا</th><th>کۆی کاڵاکان</th><th>بەروار</th></tr></thead>
+              <thead><tr><th>ژمارەی داواکاری</th><th>فرۆشگا</th><th>دۆخی فرۆشگا</th><th>کۆی کاڵاکان</th><th>بەروار</th><th>کردار</th></tr></thead>
               <tbody>{merchantOrders.map((order) => (
                 <tr key={order.id}>
                   <td dir="ltr">{orderNumbers.get(order.order_id) ?? "—"}</td>
@@ -146,6 +147,7 @@ export default async function OrdersPage() {
                   <td><span className="status-pill">{merchantOrderStatusLabels[order.status] ?? order.status}</span></td>
                   <td>{order.items_subtotal_iqd.toLocaleString("en-US")} دینار</td>
                   <td>{new Date(order.created_at).toLocaleDateString("ckb-IQ")}</td>
+                  <td><OrderWorkflowAction scope="merchant" recordId={order.id} status={order.status} /></td>
                 </tr>
               ))}</tbody>
             </table>

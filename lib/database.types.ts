@@ -1300,7 +1300,19 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_assign_delivery_captain_v1: {
+        Args: { p_assignment_id: string; p_captain_user_id: string }
+        Returns: Json
+      }
+      captain_update_delivery_status_v1: {
+        Args: { p_assignment_id: string; p_new_status: string; p_note?: string | null }
+        Returns: Json
+      }
       current_app_role: { Args: never; Returns: string }
+      merchant_update_order_store_status_v1: {
+        Args: { p_order_store_id: string; p_new_status: string; p_note?: string | null }
+        Returns: Json
+      }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
       manage_delivery_zone_v1: {
         Args: {
