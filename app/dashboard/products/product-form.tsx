@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, PackagePlus, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -76,6 +76,7 @@ export function ProductCreateForm({
   const [maxOrder, setMaxOrder] = useState("");
   const [quantityStep, setQuantityStep] = useState(String(getDefaultOrderRules(initialUnit).quantityStep));
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -211,6 +212,7 @@ export function ProductCreateForm({
       setStock("");
       setCategoryId("");
       setImageFile(null);
+      if (imageInputRef.current) imageInputRef.current.value = "";
       changeUnit(initialUnit);
       setSuccess("بەرهەم و وێنەکە بە سەرکەوتوویی پاشەکەوت کران؛ بەرهەمەکە وەک ڕەشنووس چاوەڕێی پشکنینی بەڕێوەبەر دەکات.");
       router.refresh();
@@ -238,7 +240,7 @@ export function ProductCreateForm({
             {imagePreview ? (
               <div className="product-image-preview">
                 <img src={imagePreview} alt="پێشبینینی وێنەی بەرهەم" />
-                <button type="button" className="product-image-remove" onClick={() => setImageFile(null)} aria-label="سڕینەوەی وێنە"><X size={17} /></button>
+                <button type="button" className="product-image-remove" onClick={() => { setImageFile(null); if (imageInputRef.current) imageInputRef.current.value = ""; }} aria-label="سڕینەوەی وێنە"><X size={17} /></button>
               </div>
             ) : (
               <label className="product-image-dropzone" htmlFor="product-image">
@@ -247,7 +249,7 @@ export function ProductCreateForm({
                 <span>JPG، PNG، WEBP یان AVIF · تا ٥ MB</span>
               </label>
             )}
-            <input id="product-image" className="product-image-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={chooseImage} />
+            <input ref={imageInputRef} id="product-image" className="product-image-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={chooseImage} />
           </div>
         </div>
         <div className="merchant-field"><label htmlFor="product-name">ناوی بەرهەم *</label><input className="plain-field" id="product-name" required minLength={2} maxLength={180} value={name} onChange={(event) => setName(event.target.value)} /></div>
