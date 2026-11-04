@@ -35,7 +35,6 @@ export function GoogleSignInButton({ next = "/dashboard" }: { next?: string }) {
 
   return (
     <div className="google-auth-block">
-      <div className="auth-divider"><span />یان<span /></div>
       <button
         type="button"
         className="auth-google-button"
@@ -45,6 +44,7 @@ export function GoogleSignInButton({ next = "/dashboard" }: { next?: string }) {
         <span className="google-mark" aria-hidden="true">G</span>
         {busy ? "پەیوەندی بە Google..." : "بەردەوامبوون بە Google"}
       </button>
+      <div className="auth-divider"><span />یان بە ئیمەیڵ<span /></div>
       {error && <p className="form-error" role="alert">{error}</p>}
     </div>
   );

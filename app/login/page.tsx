@@ -59,6 +59,7 @@ function LoginContent() {
         <p className="muted">بچۆ ژوورەوە بۆ بەردەوامبوون لە شاخ ستور.</p>
         {feedbackError && <p className="form-error" role="alert">{feedbackError}</p>}
         {passwordUpdated && <p className="form-success" role="status">وشەی نهێنیت بە سەرکەوتوویی نوێکرایەوە. ئێستا بچۆ ژوورەوە.</p>}
+        <GoogleSignInButton next="/dashboard" />
         <form onSubmit={handleSubmit} className="auth-form">
           <label htmlFor="email">ئیمەیڵ</label>
           <div className="field-wrap"><Mail size={18} /><input id="email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" dir="ltr" /></div>
@@ -68,7 +69,6 @@ function LoginContent() {
           {error && <p className="form-error" role="alert">{error}</p>}
           <button className="button auth-submit" type="submit" disabled={busy}>{busy ? "چاوەڕێ بکە..." : "چوونەژوورەوە"}</button>
         </form>
-        <GoogleSignInButton next="/dashboard" />
         <p className="auth-switch">هەژمارت نییە؟ <Link href="/signup">خۆت تۆمار بکە</Link></p>
       </section>
     </main>

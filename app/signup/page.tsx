@@ -62,6 +62,7 @@ export default function SignupPage() {
         <div className="auth-brand"><span className="brand-mark"><ShoppingBag size={27} /></span><span className="brand-name">Shakh <b>Store</b></span></div>
         <h1>دروستکردنی هەژمار</h1>
         <p className="muted">زانیارییە سەرەتاییەکانت بنووسە بۆ تۆمارکردن.</p>
+        <GoogleSignInButton next="/dashboard" />
         <form onSubmit={handleSubmit} className="auth-form">
           <label htmlFor="fullName">ناوی تەواو</label>
           <div className="field-wrap"><UserRound size={18} /><input id="fullName" autoComplete="name" required minLength={2} maxLength={160} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="ناوی تەواوت" /></div>
@@ -75,7 +76,6 @@ export default function SignupPage() {
           {success && <p className="form-success" role="status">{success}</p>}
           <button className="button auth-submit" type="submit" disabled={busy}>{busy ? "چاوەڕێ بکە..." : "دروستکردنی هەژمار"}</button>
         </form>
-        <GoogleSignInButton next="/dashboard" />
         <p className="auth-switch">پێشتر هەژمارت هەبووە؟ <Link href="/login">چوونەژوورەوە</Link></p>
       </section>
     </main>
