@@ -29,7 +29,7 @@ export default async function ProductModerationPage() {
   }
 
   const [productsResult, storesResult, categoriesResult, eventsResult] = await Promise.all([
-    supabase.from("products").select("id,store_id,category_id,name,price_iqd,stock_quantity,unit,status,is_available,updated_at").order("updated_at", { ascending: false }).limit(100),
+    supabase.from("products").select("id,store_id,category_id,name,image_url,price_iqd,stock_quantity,min_order_quantity,max_order_quantity,quantity_step,unit,status,is_available,updated_at").order("updated_at", { ascending: false }).limit(100),
     supabase.from("stores").select("id,name,is_platform_store"),
     supabase.from("catalog_categories").select("id,name_ckb"),
     supabase.from("product_moderation_events").select("id,product_id,store_id,actor_role,previous_status,new_status,reason,created_at").order("created_at", { ascending: false }).limit(30),
@@ -43,13 +43,21 @@ export default async function ProductModerationPage() {
   const products: ProductModerationItem[] = (productsResult.data ?? []).map((product) => {
     const store = storesById.get(product.store_id);
     return {
-      id: product.id, name: product.name,
+      id: product.id,
+      name: product.name,
+      imageUrl: product.image_url,
       storeName: store?.name ?? "فرۆشگای نەناسراو",
       isPlatformStore: store?.is_platform_store ?? false,
       categoryName: product.category_id ? categoriesById.get(product.category_id)?.name_ckb ?? null : null,
-      priceIqd: product.price_iqd, stockQuantity: product.stock_quantity,
-      unit: product.unit, status: product.status as ProductStatus,
-      isAvailable: product.is_available, updatedAt: product.updated_at,
+      priceIqd: product.price_iqd,
+      stockQuantity: product.stock_quantity === null ? null : Number(product.stock_quantity),
+      minOrderQuantity: product.min_order_quantity,
+      maxOrderQuantity: product.max_order_quantity,
+      quantityStep: product.quantity_step,
+      unit: product.unit,
+      status: product.status as ProductStatus,
+      isAvailable: product.is_available,
+      updatedAt: product.updated_at,
     };
   });
 
@@ -61,7 +69,7 @@ export default async function ProductModerationPage() {
   }));
 
   return (
-    <DashboardFrame identity={identity} title="پشکنینی بەرهەم" subtitle="بڵاوکردنەوە، گەڕاندنەوە بۆ ڕەشنووس و ئەرشیفکردنی بەرهەمەکان." activePath="/dashboard/product-moderation">
+    <DashboardFrame identity={identity} title="پشکنینی بەرهەم" subtitle="وێنە، نرخ، یەکە و سنووری داواکاری پشکنین بکە." activePath="/dashboard/product-moderation">
       {pageError ? (
         <div className="empty-state"><strong>نەتوانرا داتای پشکنینی بەرهەم بخوێندرێتەوە</strong><span className="muted">دەستڕاگەیشتن و policy ـەکانی Database پشکنە.</span></div>
       ) : <ProductModerationReview products={products} events={events} />}
