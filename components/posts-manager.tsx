@@ -8,7 +8,7 @@ import { getPostStatusLabel, getPostStatusTargets, type PostStatus } from "@/lib
 export type PostRecord = {
   id: string; title: string; slug: string; excerpt: string; body: string;
   cover_image_url: string | null; status: PostStatus; published_at: string | null;
-  updated_at: string;
+  store_id: string | null; updated_at: string;
 };
 export type PostAuditRecord = {
   id: string; post_id: string; title_snapshot: string; action: string;
@@ -41,12 +41,13 @@ function StatusForm({ post }: { post: PostRecord }) {
   );
 }
 
-function PostEditor({ post }: { post?: PostRecord }) {
+function PostEditor({ post, storeId }: { post?: PostRecord; storeId?: string | null }) {
   const [state, formAction, pending] = useActionState(savePostAction, initialState);
   const suffix = post?.id ?? "new";
   return (
     <form action={formAction} className="merchant-form post-editor-form">
       {post && <input type="hidden" name="post_id" value={post.id} />}
+      {!post && storeId && <input type="hidden" name="store_id" value={storeId} />}
       <div className="merchant-field">
         <label htmlFor={`post-title-${suffix}`}>ناونیشان *</label>
         <input className="plain-field" id={`post-title-${suffix}`} name="title" required minLength={3} maxLength={180} defaultValue={post?.title ?? ""} />
@@ -80,17 +81,27 @@ function formatDate(value: string | null) {
   return new Date(value).toLocaleString("ckb-IQ", { dateStyle: "medium", timeStyle: "short" });
 }
 
-export function PostsManager({ posts, events }: { posts: PostRecord[]; events: PostAuditRecord[] }) {
+export function PostsManager({
+  posts, events, mode = "platform", storeId = null, storeName = null,
+}: {
+  posts: PostRecord[];
+  events: PostAuditRecord[];
+  mode?: "platform" | "merchant";
+  storeId?: string | null;
+  storeName?: string | null;
+}) {
   return (
     <div className="posts-manager">
       <section className="dashboard-welcome">
-        <span className="role-badge"><FileText size={15} /> پۆستی پلاتفۆرم</span>
-        <h2>بڵاوکراوە و ئاگادارییەکانی شاخ</h2>
-        <p>پۆست دروست بکە، وەک ڕەشنووس پاشەکەوتی بکە، پاش پشکنین بڵاوی بکەرەوە یان ئەرشیفی بکە.</p>
+        <span className="role-badge"><FileText size={15} /> {mode === "merchant" ? "پۆستی فرۆشگا" : "پۆستی پلاتفۆرم"}</span>
+        <h2>{mode === "merchant" ? storeName ?? "فرۆشگای من" : "بڵاوکراوە و ئاگادارییەکانی شاخ"}</h2>
+        <p>{mode === "merchant"
+          ? "پۆستەکانت تەنها بە ناوی ئەم فرۆشگایە بڵاودەبنەوە؛ پۆستی فرۆشگا و پلاتفۆرم لە یەکتر جیاوازن."
+          : "پۆستەکانی ئەم بەشە بە ناوی شاخ ستور بڵاودەبنەوە."}</p>
       </section>
       <section className="dashboard-panel">
         <h3>دروستکردنی پۆستی نوێ</h3>
-        <PostEditor />
+        <PostEditor storeId={storeId} />
       </section>
       <section className="dashboard-panel">
         <h3>پۆستەکان ({posts.length})</h3>
@@ -103,6 +114,7 @@ export function PostsManager({ posts, events }: { posts: PostRecord[]; events: P
                 <div className="post-admin-card-heading">
                   <div>
                     <span className="role-badge">{getPostStatusLabel(post.status)}</span>
+                    {mode === "platform" && <small className="muted">{post.store_id ? "پۆستی دوکاندار" : "شاخ ستور"}</small>}
                     <h4>{post.title}</h4>
                     <p className="muted" dir="ltr">/posts/{post.slug}</p>
                   </div>
@@ -111,7 +123,7 @@ export function PostsManager({ posts, events }: { posts: PostRecord[]; events: P
                 <p>{post.excerpt}</p>
                 <details>
                   <summary><Pencil size={15} /> دەستکاریکردنی ناوەڕۆک</summary>
-                  <PostEditor post={post} />
+                  <PostEditor post={post} storeId={storeId} />
                 </details>
                 <StatusForm post={post} />
               </article>
@@ -130,7 +142,7 @@ export function PostsManager({ posts, events }: { posts: PostRecord[]; events: P
                   <td>{event.title_snapshot}</td>
                   <td>{event.action}</td>
                   <td>{event.previous_status ? `${getPostStatusLabel(event.previous_status)} ← ${getPostStatusLabel(event.new_status)}` : getPostStatusLabel(event.new_status)}</td>
-                  <td>{event.actor_role === "super_admin" ? "سوپەر ئەدمین" : "بەڕێوەبەر"}</td>
+                  <td>{event.actor_role === "super_admin" ? "سوپەر ئەدمین" : event.actor_role === "admin" ? "بەڕێوەبەر" : event.actor_role === "restaurant" ? "دوکانداری چێشتخانە" : event.actor_role === "supermarket" ? "دوکانداری سوپەرمارکێت" : event.actor_role === "produce_vendor" ? "فرۆشیاری سەوزە و میوە" : event.actor_role === "meat_seafood_vendor" ? "فرۆشیاری گۆشت و سپیاتی" : "بەکارهێنەر"}</td>
                   <td>{formatDate(event.created_at)}</td>
                 </tr>
               ))}</tbody>
