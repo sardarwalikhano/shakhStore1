@@ -71,3 +71,45 @@ Customers can submit store applications at `/merchant/apply`. Admins and super a
 ## Deployment
 
 The production project is `shakh-store1` on Vercel. The production hostname is `shakh-store1.vercel.app`. Configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for Production, Preview, and Development. Preview-only access protection may be enabled independently of Production.
+
+
+## Authentication setup
+
+The Shakh Store production domains are `https://daim-post.online` and `https://www.daim-post.online`; the Vercel fallback domain is `https://shakh-store1.vercel.app`.
+
+### Supabase Auth URL configuration
+
+Set the Auth **Site URL** to `https://daim-post.online`. Add these application callback URLs to the Redirect URLs allow list:
+
+- `https://daim-post.online/auth/callback`
+- `https://www.daim-post.online/auth/callback`
+- `https://shakh-store1.vercel.app/auth/callback`
+- `http://localhost:3000/auth/callback` (local development only)
+
+Do not add wildcard domains. Keep the app callback path exact. The callback exchanges the PKCE code for a Supabase session and validates the `next` destination as an in-app path to prevent open redirects.
+
+### Google OAuth
+
+1. In Google Cloud Console, create an OAuth client of type **Web application**.
+2. Add authorized JavaScript origins for the production domains and the Vercel fallback domain. Add `http://localhost:3000` only while developing locally.
+3. In Google Cloud **Authorized redirect URIs**, add the Supabase callback shown on the Supabase Authentication > Providers > Google page. For this project, the standard callback is `https://vtxntrcsjmnmbnfxhfgz.supabase.co/auth/v1/callback`; confirm the exact URL shown in the dashboard.
+4. Enable Google in Supabase Authentication > Providers and paste the Google Client ID and Client Secret there. Never commit the Client Secret to Git or expose it as a `NEXT_PUBLIC_*` variable.
+
+The app's own post-login callback is `/auth/callback`; this is distinct from Google's redirect URI, which points to Supabase Auth.
+
+### Resend SMTP for Supabase Auth
+
+Use a dedicated Resend API key with **sending access only**, restricted to the verified sending domain. In Supabase Authentication > SMTP Settings configure:
+
+| Setting | Value |
+| --- | --- |
+| Host | `smtp.resend.com` |
+| Port | `465` (SSL) |
+| Username | `resend` |
+| Password | Dedicated Resend sending API key |
+| Sender address | `no-reply@mail.daim-post.online` |
+| Sender name | `Shakh Store` |
+
+Keep email confirmation enabled. Keep Resend click/open tracking disabled for authentication messages so reset and confirmation links are not rewritten. The current Resend domain has verified DKIM and sending SPF records; its failed MX record is for inbound receiving and is not required for outbound SMTP sending.
+
+Use the Supabase **Reset Password** email template with a link using `{{ .ConfirmationURL }}`. The app requests a redirect to `/auth/callback`, then sends the user to `/reset-password?mode=update` after the PKCE session is established.
