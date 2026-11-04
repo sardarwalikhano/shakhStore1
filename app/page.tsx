@@ -36,8 +36,11 @@ export default async function HomePage() {
   let deliveryZones: DeliveryZoneData[] = [];
   let configured = Boolean(supabase);
   let zonesAvailable = Boolean(supabase);
+  let signedInUser = null;
 
   if (supabase) {
+    const { data: { user } } = await supabase.auth.getUser();
+    signedInUser = user;
     const [storeResult, zoneResult] = await Promise.all([
       supabase.from("stores")
         .select("id,name,slug,merchant_category,description,city,district")
@@ -71,7 +74,7 @@ export default async function HomePage() {
               <p>لە چێشتخانە و سوپەرمارکێت تا گۆشت و سەوزەی تازە؛ بە ئاسانی بگەڕێ، هەڵبژێرە و داواکارییەکەت تۆمار بکە.</p>
               <div className="hero-actions">
                 <Link href="/search" className="button">دەستپێکردنی گەڕان <ArrowLeft size={18} /></Link>
-                <Link href="/signup" className="button button-secondary">دروستکردنی هەژمار</Link>
+                {!signedInUser && <Link href="/signup" className="button button-secondary">دروستکردنی هەژمار</Link>}
               </div>
               <div className="hero-trust"><span /> بە زمانی کوردی و داواکارییەکی پارێزراو</div>
             </div>
@@ -147,7 +150,9 @@ export default async function HomePage() {
           <div className="joining-card">
             <div className="joining-icon"><Gift size={34} /></div>
             <div><h2>خاوەنی فرۆشگایت؟</h2><p>داواکاری پەیوەندیکردن بنێرە بۆ ئەوەی فرۆشگاکەت لە شاخ ستوردا بەشداری بکات.</p></div>
-            <Link href="/signup" className="button">دروستکردنی هەژمار <ArrowLeft size={18} /></Link>
+            <Link href={signedInUser ? "/dashboard" : "/signup"} className="button">
+              {signedInUser ? "چوونە داشبۆرد" : "دروستکردنی هەژمار"} <ArrowLeft size={18} />
+            </Link>
           </div>
         </section>
       </main>
