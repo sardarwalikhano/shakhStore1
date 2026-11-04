@@ -2,42 +2,106 @@ import { redirect } from "next/navigation";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { PostsManager, type PostAuditRecord, type PostRecord } from "@/components/posts-manager";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getMerchantCategoryForRole } from "@/lib/post-rules";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPostsPage() {
+type DashboardPostRole =
+  | "admin" | "super_admin" | "restaurant" | "supermarket"
+  | "produce_vendor" | "meat_seafood_vendor";
+
+export default async function DashboardPostsPage() {
   const supabase = await createSupabaseServerClient();
   if (!supabase) redirect("/login");
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const roleValue = user.app_metadata?.role;
-  const role = roleValue === "admin" || roleValue === "super_admin" ? roleValue : null;
+  const rawRole = user.app_metadata?.role;
+  const role = typeof rawRole === "string" ? rawRole : null;
+  const platformManager = role === "admin" || role === "super_admin";
+  const merchantCategory = getMerchantCategoryForRole(role);
+  const allowed = platformManager || merchantCategory !== null;
+  const dashboardRole = allowed ? role as DashboardPostRole : null;
   const identity = {
     name: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email ?? "بەکارهێنەر",
     email: user.email ?? null,
-    role,
+    role: dashboardRole,
   };
 
-  if (!role) {
-    return <DashboardFrame identity={identity} title="پۆست و ئاگاداری" subtitle="ئەم بەشە تەنها بۆ ئەدمین و سوپەر ئەدمینە." activePath="/dashboard/posts">
+  if (!allowed) {
+    return <DashboardFrame identity={identity} title="پۆست و ئاگاداری" subtitle="ئەم بەشە تەنها بۆ پلاتفۆرم و دوکاندارانی پەسەندکراوە." activePath="/dashboard/posts">
       <div className="empty-state"><strong>دەستڕاگەیشتنت بەم بەشە نییە</strong></div>
     </DashboardFrame>;
   }
 
-  const [postsResult, eventsResult] = await Promise.all([
-    supabase.from("posts").select("id,title,slug,excerpt,body,cover_image_url,status,published_at,updated_at").order("updated_at", { ascending: false }).limit(100),
-    supabase.from("post_audit_events").select("id,post_id,title_snapshot,action,previous_status,new_status,actor_role,created_at").order("created_at", { ascending: false }).limit(50),
-  ]);
-  const pageError = postsResult.error || eventsResult.error;
+  let store: { id: string; name: string; status: string } | null = null;
+  let storeError: string | null = null;
+  if (!platformManager && merchantCategory) {
+    const { data, error } = await supabase.from("stores")
+      .select("id,name,status")
+      .eq("owner_id", user.id)
+      .eq("merchant_category", merchantCategory)
+      .eq("is_platform_store", false)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    store = data;
+    storeError = error?.message ?? null;
+  }
+
+  if (!platformManager && !store) {
+    return <DashboardFrame identity={identity} title="پۆست و ئاگاداری" subtitle="بەشی پۆستەکانی فرۆشگاکەت." activePath="/dashboard/posts">
+      <div className="empty-state">
+        <strong>{storeError ? "نەتوانرا زانیاری فرۆشگا بخوێندرێتەوە" : "فرۆشگای چالاکی هاوتای ڕۆڵەکەت نییە"}</strong>
+        <span className="muted">پۆستکردن تەنها بۆ فرۆشگای پەسەندکراو و چالاک ڕێگەپێدراوە.</span>
+      </div>
+    </DashboardFrame>;
+  }
+
+  let postsQuery = supabase.from("posts")
+    .select("id,title,slug,excerpt,body,cover_image_url,status,published_at,store_id,updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(100);
+  if (!platformManager && store) postsQuery = postsQuery.eq("store_id", store.id);
+
+  const postsResult = await postsQuery;
   const posts = (postsResult.data ?? []) as PostRecord[];
+  let eventsResult;
+  if (platformManager) {
+    eventsResult = await supabase.from("post_audit_events")
+      .select("id,post_id,title_snapshot,action,previous_status,new_status,actor_role,created_at")
+      .order("created_at", { ascending: false }).limit(50);
+  } else {
+    const postIds = posts.map((post) => post.id);
+    eventsResult = postIds.length
+      ? await supabase.from("post_audit_events")
+          .select("id,post_id,title_snapshot,action,previous_status,new_status,actor_role,created_at")
+          .in("post_id", postIds).order("created_at", { ascending: false }).limit(50)
+      : { data: [], error: null };
+  }
+
+  const pageError = postsResult.error || eventsResult.error;
   const events = (eventsResult.data ?? []) as PostAuditRecord[];
 
   return (
-    <DashboardFrame identity={identity} title="پۆست و ئاگاداری" subtitle="دروستکردن، دەستکاریکردن، بڵاوکردنەوە و ئەرشیفکردنی پۆستەکانی پلاتفۆرم." activePath="/dashboard/posts">
+    <DashboardFrame
+      identity={identity}
+      title="پۆست و ئاگاداری"
+      subtitle={platformManager
+        ? "پۆستی پلاتفۆرم؛ هەموویان بە ناوی شاخ ستور بڵاودەبنەوە."
+        : `پۆستی تایبەت بە فرۆشگای ${store?.name ?? ""}; بەشداریکردن لە پۆستەکانی فرۆشگای تر ڕێگەپێدراو نییە.`}
+      activePath="/dashboard/posts"
+    >
       {pageError
         ? <div className="empty-state"><strong>نەتوانرا پۆستەکان بخوێندرێنەوە</strong><span className="muted">RLS و دەستڕاگەیشتنی Database پشکنە.</span></div>
-        : <PostsManager posts={posts} events={events} />}
+        : <PostsManager
+            posts={posts}
+            events={events}
+            mode={platformManager ? "platform" : "merchant"}
+            storeId={store?.id ?? null}
+            storeName={store?.name ?? null}
+          />}
     </DashboardFrame>
   );
 }
