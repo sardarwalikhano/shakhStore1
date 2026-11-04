@@ -33,12 +33,24 @@ export function MerchantApplicationForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(""); setSuccess("");
+    setError("");
+    setSuccess("");
+
     const cleanSlug = normalizeSlug(slug);
+    const cleanAddressLine = addressLine.trim();
+
     if (cleanSlug && !/^[a-z0-9]+([_-][a-z0-9]+)*$/.test(cleanSlug)) {
       setError("ناوی کورت دەبێت تەنها پیتی ئینگلیزی، ژمارە و - یان _ لەخۆبگرێت.");
       return;
     }
+
+    // Validate the trimmed value before sending it to PostgreSQL.
+    // HTML minLength alone does not account for leading/trailing whitespace.
+    if (cleanAddressLine.length < 3) {
+      setError("ناونیشانی تەواو دەبێت لانیکەم ٣ پیت بێت. تکایە ناونیشانێکی تەواو بنووسە، نەک تەنها ژمارە.");
+      return;
+    }
+
     setBusy(true);
     try {
       const supabase = createSupabaseBrowserClient();
@@ -51,13 +63,23 @@ export function MerchantApplicationForm() {
         phone: phone.trim(),
         city: city.trim(),
         district: district.trim(),
-        address_line: addressLine.trim(),
+        address_line: cleanAddressLine,
       });
-      if (insertError) throw insertError;
+
+      if (insertError) {
+        if (
+          insertError.code === "23514" &&
+          insertError.message.includes("merchant_applications_address_length")
+        ) {
+          throw new Error("ناونیشانی تەواو دەبێت لانیکەم ٣ پیت بێت.");
+        }
+        throw new Error(insertError.message);
+      }
+
       setSuccess("داواکارییەکەت نێردرا. تا پەسەندکردن، هیچ ڕۆڵ یان فرۆشگایەکی نوێ بۆ هەژمارەکەت دروست ناکرێت.");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "ناردنی داواکاری سەرکەوتوو نەبوو.");
+      setError(caught instanceof Error ? caught.message : "ناردنی داواکاری سەرکەوتوو نەبوو. تکایە خانەکان بپشکنە و دووبارە هەوڵ بدەرەوە.");
     } finally {
       setBusy(false);
     }
@@ -74,7 +96,7 @@ export function MerchantApplicationForm() {
         <div className="merchant-field"><label htmlFor="phone">ژمارەی مۆبایل *</label><div className="field-wrap"><Phone size={18} /><input id="phone" type="tel" dir="ltr" required minLength={7} maxLength={32} value={phone} onChange={(e) => setPhone(e.target.value)} /></div></div>
         <div className="merchant-field"><label htmlFor="city">شار *</label><div className="field-wrap"><MapPin size={18} /><input id="city" required minLength={2} maxLength={100} value={city} onChange={(e) => setCity(e.target.value)} placeholder="ناوی شار" /></div></div>
         <div className="merchant-field"><label htmlFor="district">گەڕەک *</label><div className="field-wrap"><input id="district" required minLength={2} maxLength={120} value={district} onChange={(e) => setDistrict(e.target.value)} /></div></div>
-        <div className="merchant-field merchant-field-wide"><label htmlFor="addressLine">ناونیشانی تەواو *</label><div className="field-wrap"><input id="addressLine" required minLength={3} maxLength={240} value={addressLine} onChange={(e) => setAddressLine(e.target.value)} /></div></div>
+        <div className="merchant-field merchant-field-wide"><label htmlFor="addressLine">ناونیشانی تەواو *</label><div className="field-wrap"><input id="addressLine" required minLength={3} maxLength={240} value={addressLine} onChange={(e) => setAddressLine(e.target.value)} placeholder="وەک: گەڕەکی ئیسکانی، کوچەی ٤٥" /></div></div>
         <div className="merchant-field merchant-field-wide"><label htmlFor="description">کورتەیەک لەسەر فرۆشگا</label><textarea id="description" rows={4} maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         {error && <p className="form-error merchant-field-wide" role="alert">{error}</p>}
         {success && <p className="form-success merchant-field-wide" role="status">{success}</p>}
