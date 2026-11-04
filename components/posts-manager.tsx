@@ -1,14 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Archive, FileText, Pencil, Plus, RotateCcw, Send } from "lucide-react";
 import { savePostAction, updatePostStatusAction, type PostActionState } from "@/app/dashboard/posts/actions";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getPostStatusLabel, getPostStatusTargets, type PostStatus } from "@/lib/post-rules";
 
 export type PostRecord = {
   id: string; title: string; slug: string; excerpt: string; body: string;
   cover_image_url: string | null; status: PostStatus; published_at: string | null;
-  store_id: string | null; updated_at: string;
+  store_id: string | null; category: string; updated_at: string;
 };
 export type PostAuditRecord = {
   id: string; post_id: string; title_snapshot: string; action: string;
@@ -66,7 +67,12 @@ function PostEditor({ post, storeId }: { post?: PostRecord; storeId?: string | n
       </div>
       <div className="merchant-field merchant-field-wide">
         <label htmlFor={`post-cover-${suffix}`}>لینکی وێنەی سەرەکی (HTTPS)</label>
-        <input className="plain-field" id={`post-cover-${suffix}`} name="cover_image_url" type="url" placeholder="https://..." defaultValue={post?.cover_image_url ?? ""} dir="ltr" />
+        <input type="hidden" name="cover_image_url" value={coverUrl} />
+        <label htmlFor={`post-cover-file-${suffix}`}>وێنەی پۆست (JPG، PNG، WEBP، AVIF تا ٥ MB)</label>
+        <input ref={fileRef} id={`post-cover-file-${suffix}`} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>uploadCover(e.target.files?.[0])} />
+        {uploading && <small>وێنە بار دەکرێت...</small>}
+        {uploadError && <p className="form-error" role="alert">{uploadError}</p>}
+        {coverUrl && <div><img src={coverUrl} alt="پێشبینینی وێنەی پۆست" style={{maxWidth:220,maxHeight:150,objectFit:"contain"}}/><button type="button" onClick={()=>setCoverUrl("")}>لابردنی وێنە</button></div>}
       </div>
       {state.message && <p className={state.status === "success" ? "form-success merchant-field-wide" : "form-error merchant-field-wide"} role={state.status === "success" ? "status" : "alert"}>{state.message}</p>}
       <div className="merchant-field-wide">
@@ -104,7 +110,7 @@ export function PostsManager({
       </section>
       <section className="dashboard-panel">
         <h3>دروستکردنی پۆستی نوێ</h3>
-        <PostEditor storeId={storeId} />
+        <PostEditor storeId={storeId} mode={mode} />
       </section>
       <section className="dashboard-panel">
         <h3>پۆستەکان ({posts.length})</h3>
@@ -126,7 +132,7 @@ export function PostsManager({
                 <p>{post.excerpt}</p>
                 <details>
                   <summary><Pencil size={15} /> دەستکاریکردنی ناوەڕۆک</summary>
-                  <PostEditor post={post} storeId={storeId} />
+                  <PostEditor post={post} storeId={storeId} mode={mode} />
                 </details>
                 <StatusForm post={post} />
               </article>
