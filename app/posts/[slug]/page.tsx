@@ -13,7 +13,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
   if (!supabase) notFound();
 
   const { data: post, error } = await supabase.from("posts")
-    .select("title,slug,excerpt,body,published_at,store_id")
+    .select("title,slug,excerpt,body,cover_image_url,published_at,store_id")
     .eq("slug", slug)
     .eq("status", "published")
     .not("published_at", "is", null)
@@ -38,6 +38,9 @@ export default async function PublicPostDetailPage({ params }: Props) {
           <span className="eyebrow"><FileText size={15} /> {publisher}</span>
           <h1>{post.title}</h1>
           {post.published_at && <time dateTime={post.published_at}>{new Date(post.published_at).toLocaleDateString("ckb-IQ", { dateStyle: "long" })}</time>}
+          {post.cover_image_url && (
+            <img src={post.cover_image_url} alt={post.title} className="post-article-cover" />
+          )}
           <p className="post-article-excerpt">{post.excerpt}</p>
           <div className="post-article-body">{post.body}</div>
         </article>
