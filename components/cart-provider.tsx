@@ -143,7 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const value = useMemo<CartContextValue>(() => ({
     items,
     hydrated,
-    itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+    itemCount: items.length,
     subtotalIqd: calculateCartSubtotal(items),
     addItem,
     setQuantity,
