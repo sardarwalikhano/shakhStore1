@@ -17,16 +17,18 @@ export default async function ProductsDashboardPage() {
   if (!user) redirect("/login");
 
   const rawRole = user.app_metadata?.role;
-  const role = typeof rawRole === "string" && allowedRoles.includes(rawRole as MerchantRole)
-    ? rawRole as MerchantRole
-    : null;
+  const role: MerchantRole | "super_admin" | null = rawRole === "super_admin"
+    ? "super_admin"
+    : typeof rawRole === "string" && allowedRoles.includes(rawRole as MerchantRole)
+      ? rawRole as MerchantRole
+      : null;
 
   if (!role) {
     return (
       <DashboardFrame
         identity={{ name: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email ?? "بەکارهێنەر", email: user.email ?? null, role: null }}
         title="بەڕێوەبردنی بەرهەمەکان"
-        subtitle="ئەم بەشە تەنها بۆ دوکاندارانی پەسەندکراوە."
+        subtitle="ئەم بەشە تەنها بۆ دوکاندارانی پەسەندکراو و سوپەر ئەدمینە."
         activePath="/dashboard/products"
       >
         <div className="empty-state"><strong>دەستڕاگەیشتنت بەم بەشە نییە</strong></div>
@@ -34,11 +36,15 @@ export default async function ProductsDashboardPage() {
     );
   }
 
+  let storeQuery = supabase.from("stores")
+    .select("id, name, slug, merchant_category, status")
+    .order("created_at", { ascending: false });
+  storeQuery = role === "super_admin"
+    ? storeQuery.eq("is_platform_store", true).limit(1)
+    : storeQuery.eq("owner_id", user.id).eq("is_platform_store", false).limit(5);
+
   const [storeResult, categoriesResult] = await Promise.all([
-    supabase.from("stores")
-      .select("id, name, slug, merchant_category, status")
-      .eq("owner_id", user.id).eq("is_platform_store", false)
-      .order("created_at", { ascending: false }).limit(5),
+    storeQuery,
     supabase.from("catalog_categories")
       .select("id, name_ckb")
       .eq("is_active", true)
@@ -61,7 +67,7 @@ export default async function ProductsDashboardPage() {
         role,
       }}
       title="بەڕێوەبردنی بەرهەمەکان"
-      subtitle="بەرهەمەکانی فرۆشگای خۆت بە پێی دەسەڵاتی Supabase بەڕێوەببە."
+      subtitle={role === "super_admin" ? "بەرهەمەکانی فرۆشگای پلاتفۆرم لەگەڵ دەسەڵاتی Super Admin زیاد بکە." : "بەرهەمەکانی فرۆشگای خۆت بە پێی دەسەڵاتی Supabase بەڕێوەببە."}
       activePath="/dashboard/products"
     >
       {storeResult.error ? (
@@ -82,7 +88,7 @@ export default async function ProductsDashboardPage() {
           {categories.length === 0 ? (
             <div className="empty-state"><strong>هیچ پۆلێکی چالاک نییە</strong><span className="muted">پێویستە بەڕێوەبەر پۆلی بەرهەم چالاک بکات.</span></div>
           ) : (
-            <ProductCreateForm storeId={store.id} storeCategory={store.merchant_category ?? ""} categories={categories} />
+            <ProductCreateForm storeId={store.id} storeCategory={store.merchant_category ?? "supermarket"} categories={categories} />
           )}
           {productsResult?.error ? (
             <div className="empty-state"><strong>هەڵە لە خوێندنەوەی بەرهەمەکان</strong></div>
