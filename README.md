@@ -115,13 +115,14 @@ Keep email confirmation enabled. Keep Resend click/open tracking disabled for au
 Use the Supabase **Reset Password** email template with a link using `{{ .ConfirmationURL }}`. The app requests a redirect to `/auth/callback`, then sends the user to `/reset-password?mode=update` after the PKCE session is established.
 
 
-## Platform posts
+## Platform and merchant posts
 
-- Admin and super-admin can create or edit posts as drafts, then publish, unpublish, restore or archive them.
-- Public readers can only select published posts with a publication timestamp in the past.
-- Post edits and status changes write to the append-only `post_audit_events` table. Direct client writes to that audit table are not granted.
-- Public routes: `/posts` and `/posts/[slug]`; admin route: `/dashboard/posts`.
-- Migration `20261104120617_admin_platform_posts_and_audit` is applied to the linked Supabase project.
+- Admin and super-admin create platform posts with a null `store_id`; public pages attribute these posts to **Shakh Store**.
+- Merchants (`restaurant`, `supermarket`, `produce_vendor`, `meat_seafood_vendor`) can create, edit, publish and archive posts only for an active store they own whose category matches their trusted app role.
+- Public readers can only select published platform posts and published merchant posts whose store is active.
+- Merchants can read only their own post records and their related audit events. Post edits and status changes write to the append-only `post_audit_events` table; direct client writes to that table remain revoked.
+- Public routes: `/posts` and `/posts/[slug]`; shared dashboard route: `/dashboard/posts`.
+- Migrations `20261104120617_admin_platform_posts_and_audit` and `merchant_scoped_posts` define the platform and merchant post policies.
 
 ## Product moderation
 
