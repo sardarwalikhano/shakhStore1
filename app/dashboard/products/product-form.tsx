@@ -151,7 +151,7 @@ export function ProductCreateForm({
       return;
     }
     if (!Number.isSafeInteger(priceValue) || priceValue <= 0) {
-      setError("نرخی فرۆشتن دەبێت ژمارەیەکی تەواوی زیاتر لە سفر بێت.");
+      setError("نرخی فرۆشتن بە دیناری تەواو و زیاتر لە سفر بنووسە.");
       return;
     }
     if (compareValue !== null && (!Number.isSafeInteger(compareValue) || compareValue <= priceValue)) {
@@ -232,6 +232,7 @@ export function ProductCreateForm({
   }
 
   const unitLabel = getUnitLabelCkb(unit);
+  const fractionalUnit = ["kg", "liter"].includes(unit);
   return (
     <section className="merchant-form-card product-create-card" style={{ marginBlock: 22 }}>
       <div className="product-form-heading">
@@ -274,11 +275,12 @@ export function ProductCreateForm({
         </div>
         <div className="merchant-field">
           <label htmlFor="product-price">نرخی فرۆشتن بۆ ١ {unitLabel} (دینار) *</label>
-          <input className="plain-field" id="product-price" type="number" min="1" step="1" required value={price} onChange={(event) => setPrice(event.target.value)} />
+          <input className="plain-field" id="product-price" type="number" inputMode="numeric" min="1" step="1" required value={price} onChange={(event) => setPrice(event.target.value)} />
+          <small className="muted">ئەم نرخە بۆ یەک {unitLabel} ـە؛ بڕی کڕین دەتوانێت بەشێکی یەکە بێت.</small>
         </div>
         <div className="merchant-field">
-          <label htmlFor="product-compare-price">نرخی پێشوو (ئارەزوومەندانە)</label>
-          <input className="plain-field" id="product-compare-price" type="number" min="1" step="1" value={compareAtPrice} onChange={(event) => setCompareAtPrice(event.target.value)} />
+          <label htmlFor="product-compare-price">نرخی پێشووی ١ {unitLabel} (ئارەزوومەندانە)</label>
+          <input className="plain-field" id="product-compare-price" type="number" inputMode="numeric" min="1" step="1" value={compareAtPrice} onChange={(event) => setCompareAtPrice(event.target.value)} />
         </div>
         <div className="merchant-field">
           <label htmlFor="product-stock">بڕی بەردەست لە کۆگا ({unitLabel})</label>
@@ -298,9 +300,13 @@ export function ProductCreateForm({
           <input className="plain-field" id="product-quantity-step" type="number" min="0.001" step="0.001" required value={quantityStep} onChange={(event) => setQuantityStep(event.target.value)} />
         </div>
         <div className="merchant-field merchant-field-wide product-quantity-hint">
-          <strong>نموونەی شێوازی داواکاری</strong>
-          <span>کەمترین: {minOrder} {unitLabel} · زیادکردن بە: {quantityStep} {unitLabel}{maxOrder ? " · زۆرترین: " + maxOrder + " " + unitLabel : ""}</span>
-          <small>بۆ گۆشت و میوە دەتوانیت ٠.٢٥ کیلۆ یان ٠.٥٠ کیلۆ دابنێیت؛ کڕیار لە سەبەتەدا بڕی خۆی دیاری دەکات.</small>
+          <strong>ڕێسای بڕی کڕین و نموونە</strong>
+          <span>کەمترین: {minOrder} {unitLabel} · هەنگاو: {quantityStep} {unitLabel}{maxOrder ? " · زۆرترین: " + maxOrder + " " + unitLabel : ""}</span>
+          {fractionalUnit
+            ? <small>نموونە: ٠.٢٥، ٠.٥٠، ٠.٧٥ کیلۆ. بۆ لیتر: ٠.٢٥، ٠.٥٠، ٠.٧٥. نرخ هەمیشە بۆ یەک {unitLabel} حساب دەکرێت.</small>
+            : unit === "g" || unit === "ml"
+              ? <small>بڕ بە گرام/مل بە ژمارەی تەواو دیاری دەکرێت؛ نموونە ١٠٠، ١٥٠، ٢٠٠.</small>
+              : <small>بڕی دانە، پاکەت، بوتڵ، کارتۆن و دەستە بە ژمارەی تەواو دیاری دەکرێت.</small>}
         </div>
         <div className="merchant-field merchant-field-wide"><label htmlFor="product-description">وەسف</label><textarea id="product-description" rows={3} maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
         {error && <p className="form-error merchant-field-wide" role="alert">{error}</p>}
