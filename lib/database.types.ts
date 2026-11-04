@@ -859,6 +859,7 @@ export type Database = {
           published_at: string | null
           slug: string
           status: string
+          store_id: string | null
           title: string
           updated_at: string
         }
@@ -872,6 +873,7 @@ export type Database = {
           published_at?: string | null
           slug: string
           status?: string
+          store_id?: string | null
           title: string
           updated_at?: string
         }
@@ -885,10 +887,19 @@ export type Database = {
           published_at?: string | null
           slug?: string
           status?: string
+          store_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "posts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_moderation_events: {
         Row: {
