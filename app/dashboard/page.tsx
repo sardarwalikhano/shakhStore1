@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpLeft, Boxes, ClipboardList, MapPinned, Plus, Store } from "lucide-react";
+import { ArrowUpLeft, Boxes, ClipboardList, MapPinned, Plus, Store, UserRound } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -105,6 +105,7 @@ export default async function DashboardPage() {
                 <Link href="/dashboard/product-moderation" className="text-link">پشکنینی بەرهەم <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/posts" className="text-link">بەڕێوەبردنی پۆست و ئاگاداری <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/delivery-zones" className="text-link">بەڕێوەبردنی ناوچەکان <ArrowUpLeft size={17} /></Link>
+                {role === "super_admin" && <Link href="/dashboard/captains" className="text-link">بەڕێوەبردنی کاپتنەکان <UserRound size={17} /></Link>}
                 <Link href="/dashboard/deliveries" className="text-link">چاودێری گەیاندنەکان <ArrowUpLeft size={17} /></Link>
               </>
             )}

@@ -5,6 +5,7 @@ import { DashboardFrame } from "@/components/dashboard-frame";
 import { OrderWorkflowAction } from "@/components/order-workflow-action";
 import { DeliveryAssignmentAction, type CaptainOption } from "@/components/delivery-assignment-action";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isCaptainEligibleForZone } from "@/lib/captain-scope";
 
 const deliveryStatusLabels: Record<string, string> = {
   awaiting_captain: "چاوەڕێی کاپتن", assigned: "کاپتن دیاریکراوە",
@@ -44,7 +45,7 @@ export default async function DeliveriesPage({ searchParams }: Props) {
   let queryError: string | null = null;
   let availableCaptains: CaptainOption[] = [];
   if (isAdmin) {
-    const { data, error } = await supabase.rpc("admin_list_available_captains_v1");
+    const { data, error } = await supabase.rpc("admin_list_captain_scopes_v1");
     if (error) queryError = error.message;
     else availableCaptains = data ?? [];
   }
@@ -60,16 +61,16 @@ export default async function DeliveriesPage({ searchParams }: Props) {
   const rows = assignments ?? [];
   const orderIds = [...new Set(rows.map((item) => item.order_id))];
   const storeIds = [...new Set(rows.map((item) => item.order_store_id))];
-  let orderMap = new Map<string, { order_number: string; address_snapshot: unknown; total_iqd: number; currency: string }>();
+  let orderMap = new Map<string, { order_number: string; address_snapshot: unknown; total_iqd: number; currency: string; delivery_zone_id: string }>();
   let storeMap = new Map<string, { name: string; status: string }>();
 
   if (!queryError && orderIds.length) {
     const { data, error } = await supabase.from("orders")
-      .select("id,order_number,address_snapshot,total_iqd,currency").in("id", orderIds);
+      .select("id,order_number,address_snapshot,total_iqd,currency,delivery_zone_id").in("id", orderIds);
     if (error) queryError = error.message;
     else orderMap = new Map((data ?? []).map((item) => [item.id, {
       order_number: item.order_number, address_snapshot: item.address_snapshot,
-      total_iqd: item.total_iqd, currency: item.currency,
+      total_iqd: item.total_iqd, currency: item.currency, delivery_zone_id: item.delivery_zone_id,
     }]));
   }
   if (!queryError && storeIds.length) {
@@ -130,6 +131,9 @@ export default async function DeliveriesPage({ searchParams }: Props) {
             const recipient = textValue(address.recipient_name);
             const phone = textValue(address.phone);
             const notes = textValue(address.delivery_notes);
+            const eligibleCaptains = availableCaptains.filter((captain) =>
+              isCaptainEligibleForZone(captain, order?.delivery_zone_id ?? null),
+            );
             return (
               <article className="dashboard-panel" key={assignment.id}>
                 <div className="dashboard-topbar">
@@ -139,7 +143,7 @@ export default async function DeliveriesPage({ searchParams }: Props) {
                     <h3 dir="ltr">{order?.order_number ?? "—"}</h3>
                     <p className="muted">{storeMap.get(assignment.order_store_id)?.name ?? "فرۆشگا"}</p>
                     {isAdmin && assignment.captain_user_id && <p className="muted">کاپتن: {captainNames.get(assignment.captain_user_id) ?? "کاپتن دیاریکراوە"}</p>}
-                    {isAdmin && <DeliveryAssignmentAction assignmentId={assignment.id} assignmentStatus={assignment.status} storeStatus={storeMap.get(assignment.order_store_id)?.status} captains={availableCaptains} />}
+                    {isAdmin && <DeliveryAssignmentAction assignmentId={assignment.id} assignmentStatus={assignment.status} storeStatus={storeMap.get(assignment.order_store_id)?.status} captains={eligibleCaptains} />}
                   </div>
                   <strong>{order ? `${order.total_iqd.toLocaleString("en-US")} دینار` : "—"}</strong>
                 </div>
