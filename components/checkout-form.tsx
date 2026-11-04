@@ -76,7 +76,7 @@ export function CheckoutForm({
       else if (message.includes("DELIVERY_DISTANCE_NOT_CONFIGURED")) setError("ڕێژەی گەیاندنی کیلۆمەترێکی ئەم ناوچەیە هێشتا بە خزمەتگوزاریی مەودا نەبەستراوەتەوە.");
       else if (message.includes("INSUFFICIENT_STOCK")) setError("stockی یەکێک لە بەرهەمەکان بەشی ئەم داواکارییە ناکات. سەبەتە نوێ بکەرەوە.");
       else if (message.includes("PRODUCT_NOT_AVAILABLE") || message.includes("PRODUCT_NOT_FOUND")) setError("یەکێک لە بەرهەمەکان ئێستا بەردەست نییە یان لە سیستەمدا نەماوە.");
-      else if (message.includes("INVALID_PRODUCT_QUANTITY")) setError("بڕی یەکێک لە بەرهەمەکان نادروستە. بڕەکان لە سەبەتە ڕێکبخە.");
+      else if (message.includes("INVALID_PRODUCT_QUANTITY")) setError("بڕی داواکراو لەگەڵ کەمترین/زۆرترین بڕ یان هەنگاوی زیادکردنی ئەو بەرهەمە ناگونجێت. سەبەتە ڕێکبخە.");
       else if (message.includes("INVALID_CART_ITEMS")) setError("ناوەڕۆکی سەبەتە نادروستە. سەبەتە نوێ بکەرەوە و دووبارە هەوڵ بدە.");
       else if (message.includes("STORE_FULFILLMENT_NOT_CONFIGURED")) setError("فرۆشگایەک لە سەبەتەدا هێشتا ئامادەی وەرگرتنی داواکاری نییە.");
       else if (message.includes("ADDRESS_NOT_FOUND")) setError("ناونیشانی هەڵبژێردراو چیتر چالاک نییە. ناونیشانێکی تر هەڵبژێرە.");
