@@ -16,7 +16,7 @@ function friendlyDatabaseError(message: string): string {
   if (message.includes("SUPER_ADMIN_REQUIRED_FOR_PLATFORM_STORE")) return "تەنها سوپەر ئەدمین دەتوانێت بەرهەمی فرۆشگای پلاتفۆرم بگۆڕێت.";
   if (message.includes("STORE_NOT_ACTIVE")) return "فرۆشگا چالاک نییە؛ بەرهەم ناتوانرێت بڵاو بکرێتەوە.";
   if (message.includes("PRODUCT_CATEGORY_NOT_ACTIVE")) return "پۆلی بەرهەم چالاک نییە؛ پێش بڵاوکردنەوە پۆلێکی چالاک هەڵبژێرە.";
-  if (message.includes("PRODUCT_INCOMPLETE")) return "بەرهەم تەواو نییە؛ نرخ، بەردەستبوون و پۆلی چالاک پشکنە.";
+  if (message.includes("PRODUCT_INCOMPLETE")) return "بەرهەم تەواو نییە؛ وێنە، نرخ، بەردەستبوون و پۆلی چالاک پشکنە.";
   if (message.includes("ARCHIVED_PRODUCT_MUST_RETURN_TO_DRAFT_FIRST")) return "بەرهەمی ئەرشیفکراو سەرەتا دەبێت بگەڕێندرێتەوە بۆ ڕەشنووس.";
   if (message.includes("ADMIN_REQUIRED") || message.includes("AUTH_REQUIRED")) return "دەستڕاگەیشتنی بەڕێوەبەر پێویستە.";
   if (message.includes("INVALID_MODERATION_REASON")) return "هۆکار دەبێت لانیکەم ٢ پیت و زۆرترین ١٢٠٠ پیت بێت.";
