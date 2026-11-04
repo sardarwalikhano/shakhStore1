@@ -115,6 +115,26 @@ Keep email confirmation enabled. Keep Resend click/open tracking disabled for au
 Use the Supabase **Reset Password** email template with a link using `{{ .ConfirmationURL }}`. The app requests a redirect to `/auth/callback`, then sends the user to `/reset-password?mode=update` after the PKCE session is established.
 
 
+## Platform and merchant posts
+
+- Admin and super-admin create platform posts with a null `store_id`; public pages attribute these posts to **Shakh Store**.
+- Merchants (`restaurant`, `supermarket`, `produce_vendor`, `meat_seafood_vendor`) can create, edit, publish and archive posts only for an active store they own whose category matches their trusted app role.
+- Public readers can only select published platform posts and published merchant posts whose store is active.
+- Merchants can read only their own post records and their related audit events. Post edits and status changes write to the append-only `post_audit_events` table; direct client writes to that table remain revoked.
+- Public routes: `/posts` and `/posts/[slug]`; shared dashboard route: `/dashboard/posts`.
+- Migrations `20261104120617_admin_platform_posts_and_audit` and `merchant_scoped_posts` define the platform and merchant post policies.
+
+## Product moderation
+
+- Merchants create products as drafts and must select an active catalog category.
+- Product status is not writable by merchant browser clients. Admin and super-admin publication uses the `admin_set_product_status_v1` RPC.
+- Publishing requires an active store, positive price, an available product, and an active catalog category. Archived products must return to draft before publication.
+- Every moderation decision is recorded in the append-only `product_moderation_events` audit table with actor role, transition, reason, and reviewed product version.
+- The audit table is readable by admins and super admins; direct client insert, update, and delete privileges are not granted.
+- The admin review page is available at `/dashboard/product-moderation`.
+
+Migration sources `20261104103925_grant_merchant_application_insert_authenticated` and `20261104105234_admin_product_publication_workflow` reconcile the linked project's recorded migration history. Both versions are already applied remotely; do not re-apply them to the linked production project.
+
 ## Order and delivery operations
 
 - The customer order list reads order headers under the existing participant RLS policy.

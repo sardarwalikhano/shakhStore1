@@ -1,12 +1,74 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
-import { useCart } from "@/components/cart-provider";
-import { supportsFractionalQuantity } from "@/lib/marketplace-rules";
+import { useCart, type CartLine } from "@/components/cart-provider";
+import { getUnitLabelCkb, normalizeCartQuantity } from "@/lib/marketplace-rules";
 
 function money(value: number) {
   return value.toLocaleString("en-US") + " دینار";
+}
+
+function ProductQuantityControl({
+  item,
+  setQuantity,
+  removeItem,
+}: {
+  item: CartLine;
+  setQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string) => void;
+}) {
+  const [draft, setDraft] = useState(String(item.quantity));
+  const min = item.minOrderQuantity;
+  const max = item.maxOrderQuantity === null
+    ? item.stockQuantity ?? undefined
+    : item.stockQuantity === null
+      ? item.maxOrderQuantity
+      : Math.min(item.maxOrderQuantity, item.stockQuantity);
+  const step = item.quantityStep;
+
+  return (
+    <div className="quantity-control">
+      <button
+        type="button"
+        aria-label="زیادکردنی بڕ"
+        onClick={() => setQuantity(item.productId, item.quantity + step)}
+        disabled={max !== undefined && item.quantity + step > max + 0.000001}
+      ><Plus size={15} /></button>
+      <input
+        aria-label={"بڕی " + item.productName}
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={draft}
+        onChange={event => setDraft(event.target.value)}
+        onBlur={() => {
+          const requested = Number(draft);
+          const normalized = draft.trim()
+            ? normalizeCartQuantity(
+                item.unit, requested, item.stockQuantity,
+                item.minOrderQuantity, item.maxOrderQuantity, item.quantityStep,
+              )
+            : null;
+          if (normalized === null) {
+            setDraft(String(item.quantity));
+            return;
+          }
+          setQuantity(item.productId, normalized);
+          setDraft(String(normalized));
+        }}
+      />
+      <button
+        type="button"
+        aria-label="کەمکردنەوەی بڕ"
+        onClick={() => item.quantity <= min + 0.000001
+          ? removeItem(item.productId)
+          : setQuantity(item.productId, Math.max(min, item.quantity - step))}
+      ><Minus size={15} /></button>
+    </div>
+  );
 }
 
 export function CartContent() {
@@ -28,45 +90,26 @@ export function CartContent() {
   return (
     <div className="cart-layout">
       <section className="cart-items">
-        {items.map(item => {
-          const fractional = supportsFractionalQuantity(item.unit);
-          const step = fractional ? 0.1 : 1;
-          const minimum = fractional ? 0.01 : 1;
-          return (
-            <article className="cart-line" key={item.productId}>
-              <div className="cart-product-icon"><ShoppingBag size={24} /></div>
-              <div className="cart-line-info">
-                <Link href={"/stores/" + item.storeSlug} className="muted cart-store-name">{item.storeName}</Link>
-                <strong>{item.productName}</strong>
-                <span className="muted">{money(item.unitPriceIqd)} / {item.unit}</span>
-                <div className="cart-mobile-line-total">{money(Math.round(item.unitPriceIqd * item.quantity))}</div>
-              </div>
-              <div className="quantity-control">
-                <button type="button" aria-label="زیادکردنی بڕ" onClick={() => setQuantity(item.productId, item.quantity + step)}><Plus size={15} /></button>
-                <input
-                  aria-label={"بڕی " + item.productName}
-                  type="number"
-                  min={minimum}
-                  max={item.stockQuantity ?? undefined}
-                  step={fractional ? "0.01" : "1"}
-                  value={item.quantity}
-                  onChange={event => setQuantity(item.productId, Number(event.target.value))}
-                />
-                <button
-                  type="button"
-                  aria-label="کەمکردنەوەی بڕ"
-                  onClick={() => item.quantity <= minimum
-                    ? removeItem(item.productId)
-                    : setQuantity(item.productId, item.quantity - step)}
-                >
-                  <Minus size={15} />
-                </button>
-              </div>
-              <strong className="cart-line-total">{money(Math.round(item.unitPriceIqd * item.quantity))}</strong>
-              <button type="button" className="cart-remove" onClick={() => removeItem(item.productId)} aria-label={"سڕینەوەی " + item.productName}><Trash2 size={18} /></button>
-            </article>
-          );
-        })}
+        {items.map(item => (
+          <article className="cart-line" key={item.productId}>
+            {item.imageUrl
+              ? <img className="cart-product-photo" src={item.imageUrl} alt={item.productName} loading="lazy" />
+              : <div className="cart-product-icon"><ShoppingBag size={24} /></div>}
+            <div className="cart-line-info">
+              <Link href={"/stores/" + item.storeSlug} className="muted cart-store-name">{item.storeName}</Link>
+              <strong>{item.productName}</strong>
+              <span className="muted">{money(item.unitPriceIqd)} / {getUnitLabelCkb(item.unit)}</span>
+              <small className="muted">
+                کەمترین بڕ: {item.minOrderQuantity} {getUnitLabelCkb(item.unit)}
+                {item.maxOrderQuantity !== null ? " · زۆرترین بڕ: " + item.maxOrderQuantity : ""}
+              </small>
+              <div className="cart-mobile-line-total">{money(Math.round(item.unitPriceIqd * item.quantity))}</div>
+            </div>
+            <ProductQuantityControl key={item.quantity} item={item} setQuantity={setQuantity} removeItem={removeItem} />
+            <strong className="cart-line-total">{money(Math.round(item.unitPriceIqd * item.quantity))}</strong>
+            <button type="button" className="cart-remove" onClick={() => removeItem(item.productId)} aria-label={"سڕینەوەی " + item.productName}><Trash2 size={18} /></button>
+          </article>
+        ))}
       </section>
 
       <aside className="cart-summary">

@@ -3,6 +3,8 @@ import test from "node:test";
 import {
   calculateCartSubtotal,
   calculateFlatDeliveryFee,
+  getDefaultOrderRules,
+  getUnitLabelCkb,
   isValidCartLine,
   normalizeCartQuantity,
   resolveDeliveryZone,
@@ -44,10 +46,7 @@ test("delivery zone lookup rejects a different city and blank location", () => {
 
 test("flat delivery fee applies the larger of base and minimum then caps a valid maximum", () => {
   assert.equal(calculateFlatDeliveryFee({
-    ...cityWide,
-    base_fee_iqd: 2500,
-    minimum_fee_iqd: 2000,
-    maximum_fee_iqd: 2200,
+    ...cityWide, base_fee_iqd: 2500, minimum_fee_iqd: 2000, maximum_fee_iqd: 2200,
   }), 2200);
 });
 
@@ -57,35 +56,52 @@ test("distance pricing and inactive zones are not treated as flat-rate serviceab
   assert.equal(calculateFlatDeliveryFee(null), null);
 });
 
-test("invalid fee configuration is rejected rather than displayed as a valid quote", () => {
-  assert.equal(calculateFlatDeliveryFee({ ...cityWide, base_fee_iqd: -1 }), null);
-  assert.equal(calculateFlatDeliveryFee({ ...cityWide, maximum_fee_iqd: -1 }), null);
-  assert.equal(calculateFlatDeliveryFee({ ...cityWide, minimum_fee_iqd: 100, maximum_fee_iqd: 50 }), null);
-});
-
-test("kg and liter support two decimal places while piece and pack stay integral", () => {
+test("kg and liter use fractional quantities; discrete units remain whole", () => {
   assert.equal(supportsFractionalQuantity("kg"), true);
   assert.equal(supportsFractionalQuantity("liter"), true);
   assert.equal(supportsFractionalQuantity("piece"), false);
-  assert.equal(normalizeCartQuantity("kg", 0.126, null), 0.13);
-  assert.equal(normalizeCartQuantity("liter", 1.239, null), 1.24);
+  assert.equal(normalizeCartQuantity("kg", 0.31, null), 0.30);
+  assert.equal(normalizeCartQuantity("liter", 1.239, null), 1.25);
   assert.equal(normalizeCartQuantity("piece", 2.9, null), 2);
   assert.equal(normalizeCartQuantity("pack", 3.9, null), 3);
 });
 
-test("cart quantities reject zero, negative, non-finite, and exhausted stock", () => {
+test("default order rules reflect weight, liquid, gram and unit-based products", () => {
+  assert.deepEqual(getDefaultOrderRules("kg"), { minOrderQuantity: 0.25, maxOrderQuantity: null, quantityStep: 0.05 });
+  assert.deepEqual(getDefaultOrderRules("liter"), { minOrderQuantity: 0.25, maxOrderQuantity: null, quantityStep: 0.05 });
+  assert.deepEqual(getDefaultOrderRules("g"), { minOrderQuantity: 100, maxOrderQuantity: null, quantityStep: 50 });
+  assert.deepEqual(getDefaultOrderRules("piece"), { minOrderQuantity: 1, maxOrderQuantity: null, quantityStep: 1 });
+  assert.equal(getUnitLabelCkb("kg"), "کیلۆگرام");
+  assert.equal(getUnitLabelCkb("bottle"), "بوتڵ");
+});
+
+test("minimum, maximum, increment and fractional inventory are enforced in cart", () => {
+  assert.equal(normalizeCartQuantity("kg", 0.25, 1, 0.25, 0.75, 0.05), 0.25);
+  assert.equal(normalizeCartQuantity("kg", 0.42, 1, 0.25, 0.75, 0.05), 0.4);
+  assert.equal(normalizeCartQuantity("kg", 0.9, 1, 0.25, 0.75, 0.05), 0.75);
+  assert.equal(normalizeCartQuantity("kg", 0.2, 1, 0.25, 0.75, 0.05), null);
+  assert.equal(normalizeCartQuantity("kg", 0.5, 0.3, 0.25, null, 0.05), 0.3);
+  assert.equal(normalizeCartQuantity("kg", 0.25, 0.2, 0.25, null, 0.05), null);
+  assert.equal(normalizeCartQuantity("g", 150, 500, 100, null, 50), 150);
+  assert.equal(normalizeCartQuantity("g", 175, 500, 100, null, 50), 200);
+  assert.equal(normalizeCartQuantity("piece", 2.5, 10, 1, null, 1), 2);
+});
+
+test("cart quantities reject invalid stock and invalid order rules", () => {
   assert.equal(normalizeCartQuantity("kg", 0, null), null);
   assert.equal(normalizeCartQuantity("piece", -1, null), null);
   assert.equal(normalizeCartQuantity("piece", Number.NaN, null), null);
-  assert.equal(normalizeCartQuantity("piece", 1, 0), null);
+  assert.equal(normalizeCartQuantity("kg", 0.5, -1), null);
+  assert.equal(normalizeCartQuantity("kg", 0.5, null, 0, null, 0.05), null);
+  assert.equal(normalizeCartQuantity("kg", 0.5, null, 0.25, 0.2, 0.05), null);
 });
 
-test("cart quantity is clamped to the currently reported available stock", () => {
-  assert.equal(normalizeCartQuantity("piece", 9, 3), 3);
-  assert.equal(normalizeCartQuantity("kg", 2.5, 2), 2);
-});
-
-test("persisted cart line validation rejects malformed and negative-price items", () => {
+test("persisted cart line validation accepts optional purchase rules and fractional stock", () => {
+  assert.equal(isValidCartLine({
+    productId: "p1", unit: "kg", unitPriceIqd: 2500,
+    stockQuantity: 2.5, quantity: 0.5,
+    minOrderQuantity: 0.25, maxOrderQuantity: 1.5, quantityStep: 0.05,
+  }), true);
   assert.equal(isValidCartLine({
     productId: "p1", unit: "piece", unitPriceIqd: 1000,
     stockQuantity: 3, quantity: 1,

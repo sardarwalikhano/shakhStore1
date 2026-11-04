@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   calculateCartSubtotal,
+  getDefaultOrderRules,
   isValidCartLine,
   normalizeCartQuantity,
 } from "@/lib/marketplace-rules";
@@ -13,9 +14,13 @@ export type CartProductInput = {
   storeSlug: string;
   storeName: string;
   productName: string;
+  imageUrl: string | null;
   unit: string;
   unitPriceIqd: number;
   stockQuantity: number | null;
+  minOrderQuantity: number;
+  maxOrderQuantity: number | null;
+  quantityStep: number;
 };
 export type CartLine = CartProductInput & { quantity: number };
 type CartContextValue = {
@@ -29,7 +34,8 @@ type CartContextValue = {
   clearCart: () => void;
 };
 
-const STORAGE_KEY = "shakh-store-cart-v1";
+const STORAGE_KEY = "shakh-store-cart-v2";
+const LEGACY_STORAGE_KEY = "shakh-store-cart-v1";
 const CartContext = createContext<CartContextValue | null>(null);
 
 function isCartLine(value: unknown): value is CartLine {
@@ -38,7 +44,19 @@ function isCartLine(value: unknown): value is CartLine {
   return typeof item.storeId === "string"
     && typeof item.storeSlug === "string"
     && typeof item.storeName === "string"
-    && typeof item.productName === "string";
+    && typeof item.productName === "string"
+    && (item.imageUrl === undefined || item.imageUrl === null || typeof item.imageUrl === "string");
+}
+
+function withPurchaseDefaults(item: CartLine): CartLine {
+  const defaults = getDefaultOrderRules(item.unit);
+  return {
+    ...item,
+    imageUrl: item.imageUrl ?? null,
+    minOrderQuantity: item.minOrderQuantity ?? defaults.minOrderQuantity,
+    maxOrderQuantity: item.maxOrderQuantity ?? null,
+    quantityStep: item.quantityStep ?? defaults.quantityStep,
+  };
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -48,15 +66,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const raw = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
         if (raw) {
           const parsed: unknown = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            const restored = parsed.filter(isCartLine).flatMap((item) => {
+            const restored = parsed.filter(isCartLine).map(withPurchaseDefaults).flatMap((item) => {
               const quantity = normalizeCartQuantity(
-                item.unit,
-                item.quantity,
-                item.stockQuantity,
+                item.unit, item.quantity, item.stockQuantity,
+                item.minOrderQuantity, item.maxOrderQuantity, item.quantityStep,
               );
               return quantity === null ? [] : [{ ...item, quantity }];
             });
@@ -65,6 +82,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         window.localStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       } finally {
         setHydrated(true);
       }
@@ -76,6 +94,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch {
       // Keep the in-memory cart usable when browser storage is unavailable.
     }
@@ -83,25 +102,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback((product: CartProductInput) => {
     setItems((current) => {
-      const quantityAvailable = product.stockQuantity ?? 999999;
-      if (quantityAvailable <= 0) return current;
+      const minimum = product.minOrderQuantity;
+      if (product.stockQuantity !== null && product.stockQuantity < minimum) return current;
       const existing = current.find((item) => item.productId === product.productId);
       if (existing) {
         const quantity = normalizeCartQuantity(
           product.unit,
-          existing.quantity + 1,
+          existing.quantity + product.quantityStep,
           product.stockQuantity,
+          product.minOrderQuantity,
+          product.maxOrderQuantity,
+          product.quantityStep,
         );
         if (quantity === null) return current;
         return current.map((item) => item.productId === product.productId
-          ? {
-              ...item,
-              ...product,
-              quantity,
-            }
+          ? { ...item, ...product, quantity }
           : item);
       }
-      return [...current, { ...product, quantity: 1 }];
+      return [...current, { ...product, quantity: minimum }];
     });
   }, []);
 
@@ -109,9 +127,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((current) => current.map((item) => {
       if (item.productId !== productId) return item;
       const quantity = normalizeCartQuantity(
-        item.unit,
-        requested,
-        item.stockQuantity,
+        item.unit, requested, item.stockQuantity,
+        item.minOrderQuantity, item.maxOrderQuantity, item.quantityStep,
       );
       return quantity === null ? item : { ...item, quantity };
     }));
@@ -126,7 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const value = useMemo<CartContextValue>(() => ({
     items,
     hydrated,
-    itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+    itemCount: items.length,
     subtotalIqd: calculateCartSubtotal(items),
     addItem,
     setQuantity,

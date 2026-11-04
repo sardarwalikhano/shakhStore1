@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { StoreCard } from "@/components/store-card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/database.types";
+import { getUnitLabelCkb } from "@/lib/marketplace-rules";
 
 type StoreCardData = Pick<
   Tables<"stores">,
@@ -12,7 +13,7 @@ type StoreCardData = Pick<
 >;
 type ProductSearchData = Pick<
   Tables<"products">,
-  "id" | "store_id" | "name" | "description" | "price_iqd" | "unit" | "stock_quantity"
+  "id" | "store_id" | "name" | "description" | "image_url" | "price_iqd" | "compare_at_price_iqd" | "unit" | "stock_quantity" | "min_order_quantity" | "max_order_quantity" | "quantity_step"
 >;
 
 const categoryMap: Record<string, string> = {
@@ -69,7 +70,7 @@ export default async function SearchPage({
 
     if (q) {
       const { data: productData, error: productError } = await supabase.from("products")
-        .select("id,store_id,name,description,price_iqd,unit,stock_quantity")
+        .select("id,store_id,name,description,image_url,price_iqd,compare_at_price_iqd,unit,stock_quantity,min_order_quantity,max_order_quantity,quantity_step")
         .eq("status", "published")
         .eq("is_available", true)
         .ilike("name", pattern)
@@ -148,7 +149,7 @@ export default async function SearchPage({
                 <div className="product-grid">
                   {products.map(({ product, store }) => (
                     <article className="product-card search-product-card" key={product.id}>
-                      <div className="product-art"><Store size={26} /></div>
+                      <div className="product-art">{product.image_url ? <img src={product.image_url} alt={product.name} loading="lazy" /> : <Store size={26} />}</div>
                       <div className="search-product-meta">
                         <Link href={"/stores/" + store.slug}>{store.name}</Link>
                         {store.merchant_category && <span className="category-pill">{categoryLabels[store.merchant_category] ?? "فرۆشگا"}</span>}
@@ -156,7 +157,7 @@ export default async function SearchPage({
                       <div>
                         <h3>{product.name}</h3>
                         <p>{product.description || " "}</p>
-                        <strong>{money(product.price_iqd)} <small>/ {product.unit}</small></strong>
+                        <strong>{money(product.price_iqd)} <small>/ {getUnitLabelCkb(product.unit)}</small></strong>{product.compare_at_price_iqd !== null ? <del>{money(product.compare_at_price_iqd)}</del> : null}<small className="muted">کەمترین داواکاری: {product.min_order_quantity} {getUnitLabelCkb(product.unit)}{product.max_order_quantity !== null ? " · زۆرترین: " + product.max_order_quantity : ""}</small>
                       </div>
                       <AddToCartButton product={{
                         productId: product.id,
@@ -164,9 +165,13 @@ export default async function SearchPage({
                         storeSlug: store.slug,
                         storeName: store.name,
                         productName: product.name,
+                        imageUrl: product.image_url,
                         unit: product.unit,
                         unitPriceIqd: product.price_iqd,
-                        stockQuantity: product.stock_quantity,
+                        stockQuantity: product.stock_quantity === null ? null : Number(product.stock_quantity),
+                        minOrderQuantity: product.min_order_quantity,
+                        maxOrderQuantity: product.max_order_quantity,
+                        quantityStep: product.quantity_step,
                       }} />
                     </article>
                   ))}

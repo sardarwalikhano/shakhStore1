@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpLeft, Boxes, ClipboardList, MapPinned, Store } from "lucide-react";
+import { ArrowUpLeft, Boxes, ClipboardList, MapPinned, Plus, Store } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -50,6 +50,13 @@ export default async function DashboardPage() {
         <span className="role-badge">{role ? labels[role] : "ڕۆڵ دیاری نەکراوە"}</span>
         <h2>سڵاو، {displayName}</h2>
         <p>بەخێربێیت بۆ بەشی تایبەتی خۆت لە شاخ ستور.</p>
+        {(role === "admin" || role === "super_admin" || role === "restaurant" || role === "supermarket" || role === "produce_vendor" || role === "meat_seafood_vendor") && (
+          <div className="dashboard-welcome-actions">
+            <Link href="/dashboard/posts" className="button">
+              <Plus size={18} /> دروستکردنی پۆستی نوێ
+            </Link>
+          </div>
+        )}
       </section>
 
       {!role ? (
@@ -87,11 +94,16 @@ export default async function DashboardPage() {
           <div className="dashboard-quick-links">
             <Link href="/dashboard/orders" className="text-link">بینینی داواکاریەکان <ArrowUpLeft size={17} /></Link>
             {(role === "restaurant" || role === "supermarket" || role === "produce_vendor" || role === "meat_seafood_vendor") && (
-              <Link href="/dashboard/products" className="text-link">بەڕێوەبردنی بەرهەمەکان <ArrowUpLeft size={17} /></Link>
+              <>
+                <Link href="/dashboard/products" className="text-link">بەڕێوەبردنی بەرهەمەکان <ArrowUpLeft size={17} /></Link>
+                <Link href="/dashboard/posts" className="text-link">پۆستکردنی فرۆشگا <ArrowUpLeft size={17} /></Link>
+              </>
             )}
             {(role === "admin" || role === "super_admin") && (
               <>
                 <Link href="/dashboard/merchant-applications" className="text-link">پشکنینی داواکاری فرۆشگا <ArrowUpLeft size={17} /></Link>
+                <Link href="/dashboard/product-moderation" className="text-link">پشکنینی بەرهەم <ArrowUpLeft size={17} /></Link>
+                <Link href="/dashboard/posts" className="text-link">بەڕێوەبردنی پۆست و ئاگاداری <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/delivery-zones" className="text-link">بەڕێوەبردنی ناوچەکان <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/deliveries" className="text-link">چاودێری گەیاندنەکان <ArrowUpLeft size={17} /></Link>
               </>

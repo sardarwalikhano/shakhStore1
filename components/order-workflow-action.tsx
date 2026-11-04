@@ -29,12 +29,10 @@ export function OrderWorkflowAction({ scope, recordId, status }: Props) {
         ? await supabase.rpc("merchant_update_order_store_status_v1", {
             p_order_store_id: recordId,
             p_new_status: action.nextStatus,
-            p_note: null,
           })
         : await supabase.rpc("captain_update_delivery_status_v1", {
             p_assignment_id: recordId,
             p_new_status: action.nextStatus,
-            p_note: null,
           });
 
       if (result.error) throw result.error;

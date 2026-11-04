@@ -9,35 +9,89 @@ export type DeliveryZoneRule = {
   per_km_fee_iqd: number;
 };
 
+export type ProductOrderRules = {
+  minOrderQuantity: number;
+  maxOrderQuantity: number | null;
+  quantityStep: number;
+};
+
 export type CartLineRule = {
   productId: string;
   unit: string;
   unitPriceIqd: number;
   stockQuantity: number | null;
   quantity: number;
+  minOrderQuantity?: number;
+  maxOrderQuantity?: number | null;
+  quantityStep?: number;
 };
 
 export function supportsFractionalQuantity(unit: string): boolean {
   return unit === "kg" || unit === "liter";
 }
 
+export function getUnitLabelCkb(unit: string): string {
+  const labels: Record<string, string> = {
+    kg: "کیلۆگرام",
+    g: "گرام",
+    liter: "لیتر",
+    ml: "ملی‌لیتر",
+    piece: "دانە",
+    pack: "پاکەت",
+    bottle: "بوتڵ",
+    box: "کارتۆن",
+    dozen: "دەستە (١٢ دانە)",
+  };
+  return labels[unit] ?? unit;
+}
+
+export function getDefaultOrderRules(unit: string): ProductOrderRules {
+  if (unit === "kg" || unit === "liter") {
+    return { minOrderQuantity: 0.25, maxOrderQuantity: null, quantityStep: 0.05 };
+  }
+  if (unit === "g" || unit === "ml") {
+    return { minOrderQuantity: 100, maxOrderQuantity: null, quantityStep: 50 };
+  }
+  return { minOrderQuantity: 1, maxOrderQuantity: null, quantityStep: 1 };
+}
+
+function roundQuantity(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
 export function normalizeCartQuantity(
   unit: string,
   requested: number,
   stockQuantity: number | null,
+  minOrderQuantity = getDefaultOrderRules(unit).minOrderQuantity,
+  maxOrderQuantity = getDefaultOrderRules(unit).maxOrderQuantity,
+  quantityStep = getDefaultOrderRules(unit).quantityStep,
 ): number | null {
   if (!Number.isFinite(requested) || requested <= 0) return null;
-  if (
-    stockQuantity !== null
-    && (!Number.isSafeInteger(stockQuantity) || stockQuantity <= 0)
-  ) return null;
+  if (!Number.isFinite(minOrderQuantity) || minOrderQuantity <= 0) return null;
+  if (!Number.isFinite(quantityStep) || quantityStep <= 0) return null;
+  if (maxOrderQuantity !== null && (!Number.isFinite(maxOrderQuantity) || maxOrderQuantity < minOrderQuantity)) return null;
+  if (stockQuantity !== null && (!Number.isFinite(stockQuantity) || stockQuantity < 0)) return null;
 
-  const normalized = supportsFractionalQuantity(unit)
-    ? Math.round(requested * 100) / 100
-    : Math.floor(requested);
+  let upperLimit = stockQuantity;
+  if (maxOrderQuantity !== null) {
+    upperLimit = upperLimit === null ? maxOrderQuantity : Math.min(upperLimit, maxOrderQuantity);
+  }
+  if (upperLimit !== null && upperLimit < minOrderQuantity) return null;
 
-  if (!Number.isFinite(normalized) || normalized <= 0) return null;
-  return stockQuantity === null ? normalized : Math.min(normalized, stockQuantity);
+  const wholeOnly = !supportsFractionalQuantity(unit);
+  const safeRequested = wholeOnly ? Math.floor(requested) : requested;
+  const steps = Math.round((safeRequested - minOrderQuantity) / quantityStep);
+  let normalized = roundQuantity(minOrderQuantity + steps * quantityStep);
+
+  if (normalized < minOrderQuantity) return null;
+  if (upperLimit !== null && normalized > upperLimit) {
+    const maxSteps = Math.floor((upperLimit - minOrderQuantity + 1e-9) / quantityStep);
+    normalized = roundQuantity(minOrderQuantity + maxSteps * quantityStep);
+  }
+  if (normalized < minOrderQuantity || (upperLimit !== null && normalized > upperLimit)) return null;
+  if (wholeOnly && normalized !== Math.trunc(normalized)) return null;
+  return normalized;
 }
 
 export function isValidCartLine(value: unknown): value is CartLineRule {
@@ -52,8 +106,14 @@ export function isValidCartLine(value: unknown): value is CartLineRule {
     && item.unitPriceIqd >= 0
     && (item.stockQuantity === null
       || (typeof item.stockQuantity === "number"
-        && Number.isSafeInteger(item.stockQuantity)
+        && Number.isFinite(item.stockQuantity)
         && item.stockQuantity >= 0))
+    && (item.minOrderQuantity === undefined
+      || (typeof item.minOrderQuantity === "number" && Number.isFinite(item.minOrderQuantity) && item.minOrderQuantity > 0))
+    && (item.maxOrderQuantity === undefined || item.maxOrderQuantity === null
+      || (typeof item.maxOrderQuantity === "number" && Number.isFinite(item.maxOrderQuantity) && item.maxOrderQuantity > 0))
+    && (item.quantityStep === undefined
+      || (typeof item.quantityStep === "number" && Number.isFinite(item.quantityStep) && item.quantityStep > 0))
     && typeof item.quantity === "number"
     && Number.isFinite(item.quantity)
     && item.quantity > 0;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Mail, ShoppingBag, UserRound } from "lucide-react";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
@@ -17,6 +17,28 @@ export default function SignupPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    async function checkSession() {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!active) return;
+        if (user) {
+          router.replace("/dashboard");
+          router.refresh();
+          return;
+        }
+      } catch {
+        // Keep the public signup form available when session lookup is unavailable.
+      }
+      if (active) setCheckingSession(false);
+    }
+    void checkSession();
+    return () => { active = false; };
+  }, [router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,6 +75,10 @@ export default function SignupPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (checkingSession) {
+    return <main className="auth-shell"><section className="auth-card">پشکنینی هەژمار...</section></main>;
   }
 
   return (
