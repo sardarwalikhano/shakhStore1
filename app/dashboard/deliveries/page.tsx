@@ -47,7 +47,13 @@ export default async function DeliveriesPage({ searchParams }: Props) {
   if (isAdmin) {
     const { data, error } = await supabase.rpc("admin_list_captain_scopes_v1");
     if (error) queryError = error.message;
-    else availableCaptains = data ?? [];
+    else availableCaptains = (data ?? []).map((captain) => ({
+      ...captain,
+      scope_type: captain.scope_type === "global" ? "global" as const : "zones" as const,
+      zone_ids: captain.zone_ids ?? [],
+      is_active: Boolean(captain.is_active),
+      email_confirmed: Boolean(captain.email_confirmed),
+    }));
   }
 
   let assignmentQuery = supabase.from("delivery_assignments")
@@ -61,7 +67,7 @@ export default async function DeliveriesPage({ searchParams }: Props) {
   const rows = assignments ?? [];
   const orderIds = [...new Set(rows.map((item) => item.order_id))];
   const storeIds = [...new Set(rows.map((item) => item.order_store_id))];
-  let orderMap = new Map<string, { order_number: string; address_snapshot: unknown; total_iqd: number; currency: string; delivery_zone_id: string }>();
+  let orderMap = new Map<string, { order_number: string; address_snapshot: unknown; total_iqd: number; currency: string; delivery_zone_id: string | null }>();
   let storeMap = new Map<string, { name: string; status: string }>();
 
   if (!queryError && orderIds.length) {
