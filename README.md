@@ -17,6 +17,8 @@ Shakh Store is a Sorani Kurdish, RTL-first multi-store marketplace built with Ne
 - Authorization roles are read from trusted Supabase Auth app metadata, not user-editable metadata.
 - Order creation, fee calculation, product prices, inventory checks, and stock updates are performed by database-side logic.
 - The public application uses only the Supabase publishable key. Never expose a service-role or secret key in browser code or a `NEXT_PUBLIC_*` variable.
+- HTTP security headers are configured globally: MIME sniffing and framing are blocked, referrer exposure is limited, and camera/microphone permissions are disabled by default.
+- HSTS is added only in production responses. A Content Security Policy is intentionally not enabled until the complete set of Supabase, image, and asset origins has been audited, to avoid breaking authentication or media loading.
 - Checkout currently supports cash on delivery only. Wallet settlement, payment integrations, and commission settlement remain disabled until their operational rules are confirmed.
 
 ## Local development
