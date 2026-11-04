@@ -24,3 +24,25 @@ test("post status labels are localized", () => {
   assert.equal(getPostStatusLabel("published"), "بڵاوکراوە");
   assert.equal(getPostStatusLabel("draft"), "ڕەشنووس");
 });
+
+
+import { getMerchantCategoryForRole, getPostActorLabel, isPostManagerRole } from "../lib/post-rules.ts";
+
+test("merchant post roles map only to their registered store category", () => {
+  assert.equal(getMerchantCategoryForRole("restaurant"), "restaurant");
+  assert.equal(getMerchantCategoryForRole("supermarket"), "supermarket");
+  assert.equal(getMerchantCategoryForRole("produce_vendor"), "fruits_vegetables");
+  assert.equal(getMerchantCategoryForRole("meat_seafood_vendor"), "meat_seafood");
+});
+
+test("non-merchant roles cannot create store posts", () => {
+  assert.equal(getMerchantCategoryForRole("customer"), null);
+  assert.equal(getMerchantCategoryForRole("captain"), null);
+  assert.equal(isPostManagerRole("customer"), false);
+  assert.equal(isPostManagerRole("super_admin"), true);
+});
+
+test("post audit role labels are role-specific", () => {
+  assert.equal(getPostActorLabel("restaurant"), "دوکانداری چێشتخانە");
+  assert.equal(getPostActorLabel("super_admin"), "سوپەر ئەدمین");
+});
