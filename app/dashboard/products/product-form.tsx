@@ -140,8 +140,7 @@ export function ProductCreateForm({
     const minValue = Number(minOrder);
     const maxValue = maxOrder.trim() ? Number(maxOrder) : null;
     const stepValue = Number(quantityStep);
-    const fractionalUnit = ["kg", "liter"].includes(unit);
-    const discreteUnit = !fractionalUnit;
+    const discreteUnit = !["kg", "liter"].includes(unit);
 
     if (!categoryId) {
       setError("تکایە پۆلی بەرهەم دیاری بکە.");
@@ -233,6 +232,7 @@ export function ProductCreateForm({
   }
 
   const unitLabel = getUnitLabelCkb(unit);
+  const fractionalUnit = ["kg", "liter"].includes(unit);
   return (
     <section className="merchant-form-card product-create-card" style={{ marginBlock: 22 }}>
       <div className="product-form-heading">
