@@ -120,7 +120,7 @@ export async function savePostAction(
     const { error } = await supabase.from("posts").insert({
       author_user_id: user.id,
       store_id: storeId,
-      title, slug, excerpt, body, cover_image_url: coverImageUrl,
+      title, slug, category, excerpt, body, cover_image_url: coverImageUrl,
       status: "draft",
       published_at: null,
     });
