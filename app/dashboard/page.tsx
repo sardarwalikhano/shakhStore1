@@ -93,6 +93,7 @@ export default async function DashboardPage() {
               <>
                 <Link href="/dashboard/merchant-applications" className="text-link">پشکنینی داواکاری فرۆشگا <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/product-moderation" className="text-link">پشکنینی بەرهەم <ArrowUpLeft size={17} /></Link>
+                <Link href="/dashboard/posts" className="text-link">بەڕێوەبردنی پۆست و ئاگاداری <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/delivery-zones" className="text-link">بەڕێوەبردنی ناوچەکان <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/deliveries" className="text-link">چاودێری گەیاندنەکان <ArrowUpLeft size={17} /></Link>
               </>

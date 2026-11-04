@@ -804,6 +804,92 @@ export type Database = {
           },
         ]
       }
+      post_audit_events: {
+        Row: {
+          action: string
+          actor_role: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          new_status: string
+          post_id: string
+          previous_status: string | null
+          title_snapshot: string
+        }
+        Insert: {
+          action: string
+          actor_role: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          new_status: string
+          post_id: string
+          previous_status?: string | null
+          title_snapshot: string
+        }
+        Update: {
+          action?: string
+          actor_role?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          new_status?: string
+          post_id?: string
+          previous_status?: string | null
+          title_snapshot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_audit_events_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          author_user_id: string
+          body: string
+          cover_image_url: string | null
+          created_at: string
+          excerpt: string
+          id: string
+          published_at: string | null
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          cover_image_url?: string | null
+          created_at?: string
+          excerpt: string
+          id?: string
+          published_at?: string | null
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          cover_image_url?: string | null
+          created_at?: string
+          excerpt?: string
+          id?: string
+          published_at?: string | null
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_moderation_events: {
         Row: {
           actor_role: string

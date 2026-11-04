@@ -34,6 +34,7 @@ export async function SiteHeader() {
           <Link href="/search" className="header-market-link">
             <Store size={17} /> فرۆشگاکان
           </Link>
+          <Link href="/posts" className="header-market-link">پۆست و ئاگاداری</Link>
           <CartHeaderButton />
           <Link
             href={user ? "/dashboard" : "/login"}

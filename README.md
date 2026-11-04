@@ -115,6 +115,14 @@ Keep email confirmation enabled. Keep Resend click/open tracking disabled for au
 Use the Supabase **Reset Password** email template with a link using `{{ .ConfirmationURL }}`. The app requests a redirect to `/auth/callback`, then sends the user to `/reset-password?mode=update` after the PKCE session is established.
 
 
+## Platform posts
+
+- Admin and super-admin can create or edit posts as drafts, then publish, unpublish, restore or archive them.
+- Public readers can only select published posts with a publication timestamp in the past.
+- Post edits and status changes write to the append-only `post_audit_events` table. Direct client writes to that audit table are not granted.
+- Public routes: `/posts` and `/posts/[slug]`; admin route: `/dashboard/posts`.
+- Migration `20261104120617_admin_platform_posts_and_audit` is applied to the linked Supabase project.
+
 ## Product moderation
 
 - Merchants create products as drafts and must select an active catalog category.
