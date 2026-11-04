@@ -962,9 +962,13 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          image_url: string | null
           is_available: boolean
+          max_order_quantity: number | null
+          min_order_quantity: number
           name: string
           price_iqd: number
+          quantity_step: number
           sku: string | null
           status: string
           stock_quantity: number | null
@@ -978,9 +982,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_available?: boolean
+          max_order_quantity?: number | null
+          min_order_quantity?: number
           name: string
           price_iqd: number
+          quantity_step?: number
           sku?: string | null
           status?: string
           stock_quantity?: number | null
@@ -994,9 +1002,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_available?: boolean
+          max_order_quantity?: number | null
+          min_order_quantity?: number
           name?: string
           price_iqd?: number
+          quantity_step?: number
           sku?: string | null
           status?: string
           stock_quantity?: number | null
