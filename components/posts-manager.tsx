@@ -86,6 +86,20 @@ function PostEditor({ post, storeId, mode }: { post?: PostRecord; storeId?: stri
         <label htmlFor={`post-slug-${suffix}`}>Slug *</label>
         <input className="plain-field" id={`post-slug-${suffix}`} name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={180} defaultValue={post?.slug ?? ""} dir="ltr" />
       </div>
+      <div className="merchant-field">
+        <label htmlFor={`post-category-${suffix}`}>کاتەگۆری *</label>
+        <select id={`post-category-${suffix}`} name="category" defaultValue={post?.category ?? "general"} required>
+          <option value="general">گشتی</option>
+          <option value="offers">ئۆفەر و داشکاندن</option>
+          <option value="products">بەرهەمەکان</option>
+          <option value="news">هەواڵ</option>
+          <option value="announcements">ڕاگەیاندن</option>
+          <option value="food">خواردن</option>
+          <option value="meat">گۆشت</option>
+          <option value="produce">سەوزە و میوە</option>
+          <option value="supermarket">سوپەرمارکێت</option>
+        </select>
+      </div>
       <div className="merchant-field merchant-field-wide">
         <label htmlFor={`post-excerpt-${suffix}`}>پوختە *</label>
         <textarea id={`post-excerpt-${suffix}`} name="excerpt" required minLength={10} maxLength={360} rows={2} defaultValue={post?.excerpt ?? ""} />
@@ -105,7 +119,7 @@ function PostEditor({ post, storeId, mode }: { post?: PostRecord; storeId?: stri
       </div>
       {state.message && <p className={state.status === "success" ? "form-success merchant-field-wide" : "form-error merchant-field-wide"} role={state.status === "success" ? "status" : "alert"}>{state.message}</p>}
       <div className="merchant-field-wide">
-        <button className="button" type="submit" disabled={pending}><Pencil size={16} /> {pending ? "پاشەکەوت دەکرێت..." : post ? "نوێکردنەوەی پۆست" : "پاشەکەوتکردنی ڕەشنووس"}</button>
+        <button className="button" type="submit" disabled={pending || uploading}><Pencil size={16} /> {pending ? "پاشەکەوت دەکرێت..." : post ? "نوێکردنەوەی پۆست" : "پاشەکەوتکردنی ڕەشنووس"}</button>
       </div>
     </form>
   );
