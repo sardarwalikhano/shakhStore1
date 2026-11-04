@@ -113,3 +113,12 @@ Use a dedicated Resend API key with **sending access only**, restricted to the v
 Keep email confirmation enabled. Keep Resend click/open tracking disabled for authentication messages so reset and confirmation links are not rewritten. The current Resend domain has verified DKIM and sending SPF records; its failed MX record is for inbound receiving and is not required for outbound SMTP sending.
 
 Use the Supabase **Reset Password** email template with a link using `{{ .ConfirmationURL }}`. The app requests a redirect to `/auth/callback`, then sends the user to `/reset-password?mode=update` after the PKCE session is established.
+
+
+## Order and delivery operations
+
+- The customer order list reads order headers under the existing participant RLS policy.
+- Merchant accounts read only their own `order_stores` rows and linked order numbers.
+- Captains have a dedicated `/dashboard/deliveries` read-only queue. Its RLS scope exposes only assignments where `captain_user_id = auth.uid()`; admin roles can audit all assignments.
+- The captain view exposes the delivery address snapshot and contact details only for assignments visible under the participant policy.
+- This first operations phase is read-only. Order and delivery state changes remain disabled until their transition rules, cancellation/refund authority, captain assignment policy, and cash-on-delivery handoff requirements are confirmed and implemented in trusted database RPCs.

@@ -72,6 +72,14 @@ export default async function DashboardPage() {
             <span><Boxes size={21} /></span><strong>داواکاری دوکانداری</strong><small>فرۆشگاکەت لە شاخ ستور بەشدار بکە</small><ArrowUpLeft size={17} />
           </Link>
         </section>
+      ) : role === "captain" ? (
+        <section className="dashboard-panel">
+          <h3>کارەکانی گەیاندن</h3>
+          <p>داواکارییە سپێردراوەکانت و وردەکاری گەیاندن لێرە ببینە.</p>
+          <div className="dashboard-quick-links">
+            <Link href="/dashboard/deliveries" className="text-link">کردنەوەی لیستی گەیاندن <ArrowUpLeft size={17} /></Link>
+          </div>
+        </section>
       ) : (
         <section className="dashboard-panel">
           <h3>ئامرازەکانی {labels[role]}</h3>
@@ -85,6 +93,7 @@ export default async function DashboardPage() {
               <>
                 <Link href="/dashboard/merchant-applications" className="text-link">پشکنینی داواکاری فرۆشگا <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/delivery-zones" className="text-link">بەڕێوەبردنی ناوچەکان <ArrowUpLeft size={17} /></Link>
+                <Link href="/dashboard/deliveries" className="text-link">چاودێری گەیاندنەکان <ArrowUpLeft size={17} /></Link>
               </>
             )}
           </div>

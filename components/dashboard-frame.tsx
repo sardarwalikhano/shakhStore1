@@ -10,6 +10,7 @@ import {
   MapPinned,
   ShieldCheck,
   Store,
+  Truck,
   UserRound,
 } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -62,6 +63,7 @@ export function DashboardFrame({
   const navigation = [
     { href: "/dashboard", label: "پوختە", icon: LayoutDashboard, visible: true },
     { href: "/dashboard/orders", label: "داواکاریەکان", icon: ClipboardList, visible: role !== null },
+    { href: "/dashboard/deliveries", label: "گەیاندن", icon: Truck, visible: role === "captain" || role === "admin" || role === "super_admin" },
     { href: "/dashboard/products", label: "بەرهەمەکان", icon: Boxes, visible: merchantRoles.includes(role) },
     { href: "/dashboard/addresses", label: "ناونیشانەکان", icon: MapPinned, visible: role === "customer" },
     { href: "/merchant/apply", label: "داواکاری دوکانداری", icon: Store, visible: role === "customer" },
