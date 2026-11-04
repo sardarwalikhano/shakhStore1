@@ -4,10 +4,12 @@ import { useActionState } from "react";
 import { CheckCircle2, Clock3, PackageSearch, ShieldCheck } from "lucide-react";
 import { moderateProductStatusAction, type ProductModerationActionState } from "@/app/dashboard/product-moderation/actions";
 import { getProductModerationTargets, getProductStatusLabel, type ProductStatus } from "@/lib/product-moderation";
+import { getUnitLabelCkb } from "@/lib/marketplace-rules";
 
 export type ProductModerationItem = {
-  id: string; name: string; storeName: string; isPlatformStore: boolean;
+  id: string; name: string; imageUrl: string | null; storeName: string; isPlatformStore: boolean;
   categoryName: string | null; priceIqd: number; stockQuantity: number | null;
+  minOrderQuantity: number; maxOrderQuantity: number | null; quantityStep: number;
   unit: string; status: ProductStatus; isAvailable: boolean; updatedAt: string;
 };
 export type ProductModerationAuditItem = {
@@ -54,7 +56,7 @@ export function ProductModerationReview({ products, events }: { products: Produc
       <section className="dashboard-welcome">
         <span className="role-badge"><ShieldCheck size={15} /> پشکنینی بەڕێوەبەر</span>
         <h2>بڵاوکردنەوەی بەرهەم</h2>
-        <p>هەر بڕیارێک بە هۆکار و کاتی بڕیار لە تۆماری چاودێریدا دەمێنێتەوە.</p>
+        <p>وێنە، نرخ، پۆل و سنووری داواکاری بپشکنە؛ هەر بڕیارێک بە Audit تۆمار دەکرێت.</p>
       </section>
       <section className="dashboard-panel">
         <h3><PackageSearch size={19} /> لیستی بەرهەمەکان ({products.length})</h3>
@@ -63,17 +65,22 @@ export function ProductModerationReview({ products, events }: { products: Produc
         ) : (
           <div style={{ display: "grid", gap: 16 }}>
             {products.map((product) => (
-              <article key={product.id} className="merchant-form-card" style={{ padding: 18 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "start" }}>
-                  <div>
+              <article key={product.id} className="merchant-form-card product-review-card" style={{ padding: 18 }}>
+                <div className="product-review-main">
+                  {product.imageUrl
+                    ? <img className="product-review-photo" src={product.imageUrl} alt={product.name} loading="lazy" />
+                    : <div className="product-review-photo product-review-photo-empty"><PackageSearch size={26} /></div>}
+                  <div className="product-review-details">
                     <strong>{product.name}</strong>
                     <p className="muted" style={{ margin: "6px 0" }}>{product.storeName}{product.isPlatformStore ? " · فرۆشگای پلاتفۆرم" : ""}</p>
-                    <small className="muted">{product.categoryName ?? "پۆل دیاری نەکراوە"} · {product.priceIqd.toLocaleString("en-US")} دینار · {product.stockQuantity ?? "—"} {product.unit}</small>
+                    <small className="muted">{product.categoryName ?? "پۆل دیاری نەکراوە"} · {product.priceIqd.toLocaleString("en-US")} دینار / {getUnitLabelCkb(product.unit)}</small>
+                    <small className="muted">کۆگا: {product.stockQuantity === null ? "بێ سنوور" : product.stockQuantity + " " + getUnitLabelCkb(product.unit)}</small>
+                    <small className="muted">کەمترین: {product.minOrderQuantity} · زیادکردن: {product.quantityStep}{product.maxOrderQuantity !== null ? " · زۆرترین: " + product.maxOrderQuantity : ""} {getUnitLabelCkb(product.unit)}</small>
                   </div>
                   <span className="role-badge">{getProductStatusLabel(product.status)}</span>
                 </div>
                 <p className="muted" style={{ margin: "10px 0 0", fontSize: ".84rem" }}>
-                  بەردەست: {product.isAvailable ? "بەڵێ" : "نەخێر"} · نوێکراوەتەوە: {formatDate(product.updatedAt)}
+                  وێنە: {product.imageUrl ? "بارکراوە" : "نییە"} · بەردەست: {product.isAvailable ? "بەڵێ" : "نەخێر"} · نوێکراوەتەوە: {formatDate(product.updatedAt)}
                 </p>
                 <ProductReviewForm product={product} />
               </article>
