@@ -42,8 +42,37 @@ function StatusForm({ post }: { post: PostRecord }) {
   );
 }
 
-function PostEditor({ post, storeId }: { post?: PostRecord; storeId?: string | null }) {
+function PostEditor({ post, storeId, mode }: { post?: PostRecord; storeId?: string | null; mode: "platform" | "merchant" }) {
   const [state, formAction, pending] = useActionState(savePostAction, initialState);
+  const [coverUrl, setCoverUrl] = useState(post?.cover_image_url ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  async function uploadCover(file?: File) {
+    if (!file) return;
+    setUploadError("");
+    if (!["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setUploadError("JPG، PNG، WEBP یان AVIF تا ٥ MB هەڵبژێرە.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setUploading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("پێویستە بچیتە ژوورەوە.");
+      const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+      const path = `post-covers/${user.id}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file, { contentType: file.type });
+      if (error) throw error;
+      setCoverUrl(supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "بارکردنی وێنە سەرکەوتوو نەبوو.");
+    } finally {
+      setUploading(false);
+    }
+  }
   const suffix = post?.id ?? "new";
   return (
     <form id={!post ? "new-post-editor" : undefined} action={formAction} className="merchant-form post-editor-form">
