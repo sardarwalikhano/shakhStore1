@@ -74,6 +74,7 @@ export async function savePostAction(
 ): Promise<PostActionState> {
   const title = value(formData, "title");
   const slug = value(formData, "slug").toLowerCase();
+  const category = value(formData, "category");
   const excerpt = value(formData, "excerpt");
   const body = value(formData, "body");
   const rawCover = value(formData, "cover_image_url");
@@ -81,6 +82,7 @@ export async function savePostAction(
 
   if (title.length < 3 || title.length > 180) return { status: "error", message: "ناونیشان دەبێت لە نێوان ٣ تا ١٨٠ پیت بێت." };
   if (!isValidPostSlug(slug)) return { status: "error", message: "Slug دەبێت بە پیتی بچووک و ژمارە و هێڵی ناوەڕاست بێت." };
+  if (!["general","offers","products","news","announcements","food","meat","produce","supermarket"].includes(category)) return { status: "error", message: "کاتەگۆری پۆست دروست نییە." };
   if (excerpt.length < 10 || excerpt.length > 360) return { status: "error", message: "پوختە دەبێت لە نێوان ١٠ تا ٣٦٠ پیت بێت." };
   if (body.length < 20 || body.length > 30000) return { status: "error", message: "ناوەڕۆک دەبێت لە نێوان ٢٠ تا ٣٠٠٠٠ پیت بێت." };
 
@@ -105,7 +107,7 @@ export async function savePostAction(
     const existing = await canManageExistingPost(supabase, user.id, role, postId);
     if (!existing) return { status: "error", message: "تەنها دەتوانیت پۆستی خۆت یان پۆستی پلاتفۆرم دەستکاری بکەیت." };
     const { error } = await supabase.from("posts").update({
-      title, slug, excerpt, body, cover_image_url: coverImageUrl,
+      title, slug, category, excerpt, body, cover_image_url: coverImageUrl,
     }).eq("id", postId);
     if (error) return { status: "error", message: databaseMessage(error.message) };
   } else {
