@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Gift } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getMerchantCategoryForRole } from "@/lib/post-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -23,21 +24,35 @@ export default async function ShareRewardsDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const role = user.app_metadata?.role;
+  const role = typeof user.app_metadata?.role === "string" ? user.app_metadata.role : null;
   const isAdmin = role === "super_admin";
   const isCustomer = role === "customer";
+  const merchantCategory = getMerchantCategoryForRole(role);
+  const isMerchant = merchantCategory !== null;
+  const dashboardRole = isAdmin ? "super_admin" as const
+    : isCustomer ? "customer" as const
+    : isMerchant ? role as "restaurant" | "supermarket" | "produce_vendor" | "meat_seafood_vendor"
+    : null;
   const identity = {
     name: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email ?? "بەکارهێنەر",
     email: user.email ?? null,
-    role: isAdmin ? "super_admin" as const : isCustomer ? "customer" as const : null,
+    role: dashboardRole,
   };
 
-  if (!isAdmin && !isCustomer) {
+  if (!isAdmin && !isCustomer && !isMerchant) {
     return (
-      <DashboardFrame identity={identity} title="پاداشتی هاوبەشکردن" subtitle="ئەم بەشە بۆ کڕیاران و سوپەر ئەدمینە." activePath="/dashboard/share-rewards">
+      <DashboardFrame identity={identity} title="پاداشتی هاوبەشکردن" subtitle="ئەم بەشە بۆ کڕیاران، دوکانداران و سوپەر ئەدمینە." activePath="/dashboard/share-rewards">
         <div className="empty-state"><strong>دەستڕاگەیشتنت بەم بەشە نییە</strong></div>
       </DashboardFrame>
     );
+  }
+
+  let storeIds: string[] = [];
+  if (isMerchant) {
+    const { data: stores } = await supabase.from("stores")
+      .select("id").eq("owner_id", user.id).eq("merchant_category", merchantCategory)
+      .eq("is_platform_store", false);
+    storeIds = (stores ?? []).map((store) => store.id);
   }
 
   let query = supabase.from("post_share_order_attributions")
@@ -45,6 +60,7 @@ export default async function ShareRewardsDashboardPage() {
     .order("created_at", { ascending: false })
     .limit(500);
   if (isCustomer) query = query.eq("sharer_user_id", user.id);
+  else if (isMerchant) query = storeIds.length ? query.in("store_id", storeIds) : query.eq("store_id", "00000000-0000-0000-0000-000000000000");
   const { data, error } = await query;
   const rows = (data ?? []) as ReferralRow[];
   const postIds = [...new Set(rows.map((row) => row.post_id))];
@@ -58,10 +74,12 @@ export default async function ShareRewardsDashboardPage() {
   return (
     <DashboardFrame
       identity={identity}
-      title={isAdmin ? "چاودێری خەڵاتی Share & Earn" : "کڕین و خەڵاتەکانی من"}
+      title={isAdmin ? "چاودێری خەڵاتی شێر" : isMerchant ? "خەڵاتی کڕینەکانم" : "کڕین و خەڵاتەکانی من"}
       subtitle={isAdmin
         ? "هەموو پاداشتەکانی بەستراو بە کڕینی تەواوبوو و دۆخی گواستنەوەی پارە."
-        : "هەر داواکارییەک کە لە لینکی تۆوە بکرێت و بگەیەنرێت، لێرە وەک خەڵات تۆمار دەکرێت."}
+        : isMerchant
+          ? "هەر خەڵاتێک کە لە جزدانی فرۆشگاکەت کەم دەکرێتەوە، لێرە دەبینرێت."
+          : "هەر داواکارییەک کە لە لینکی تۆوە بکرێت و بگەیەنرێت، لێرە وەک خەڵات تۆمار دەکرێت."}
       activePath="/dashboard/share-rewards"
     >
       {error ? (
@@ -74,9 +92,9 @@ export default async function ShareRewardsDashboardPage() {
             <article className="dashboard-stat-card"><span>خەڵاتی چاوەڕوان</span><strong>{totalPending.toLocaleString("en-US")} دینار</strong></article>
           </section>
           <section className="dashboard-panel">
-            <div className="section-heading"><div><h2><Gift size={18} /> مێژووی کڕینەکان</h2><p>خەڵات تەنها دوای گەیاندنی داواکاری لە جزدانی خاوەنی پۆست کەم و بۆ جزدانی تۆ زیاد دەکرێت.</p></div></div>
+            <div className="section-heading"><div><h2><Gift size={18} /> مێژووی کڕینەکان</h2><p>خەڵات تەنها دوای گەیاندنی داواکاری لە جزدانی خاوەنی پۆست کەم و بۆ جزدانی خاوەن لینک زیاد دەکرێت.</p></div></div>
             {rows.length === 0 ? (
-              <div className="empty-state"><strong>هێشتا کڕینێکی خەڵاتدار تۆمار نەکراوە.</strong><span className="muted">لینکی تایبەتی پۆستێکی خەڵاتدار دروست بکە و هاوبەشی بکە.</span></div>
+              <div className="empty-state"><strong>هێشتا کڕینێکی خەڵاتدار تۆمار نەکراوە.</strong><span className="muted">{isMerchant ? "دوای کڕینی تەواوبوو، دۆخی پارەدان لێرە دەردەکەوێت." : "لینکی تایبەتی پۆستێکی خەڵاتدار دروست بکە و هاوبەشی بکە."}</span></div>
             ) : (
               <div className="table-wrap"><table className="data-table">
                 <thead><tr><th>پۆست</th><th>بڕی خەڵات</th><th>دۆخ</th><th>کات</th></tr></thead>
