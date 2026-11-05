@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
 
-type DashboardRole =
+export type DashboardRole =
   | "super_admin"
   | "admin"
   | "restaurant"
