@@ -149,12 +149,19 @@ export async function savePostAction(
   const { supabase, user, role } = auth;
   const isPlatformManager = role === "admin" || role === "super_admin";
   let storeId: string | null = null;
+  let existingPostStatus: string | null = null;
+
+  if (createsProduct) {
+    const productError = validateDraftProductForm(role, formData);
+    if (productError) return { status: "error", message: productError };
+  }
 
   if (postId) {
     if (!uuidPattern.test(postId)) return { status: "error", message: "ناسنامەی پۆست دروست نییە." };
     const existing = await canManageExistingPost(supabase, user.id, role, postId);
     if (!existing) return { status: "error", message: "تەنها دەتوانیت پۆستی خۆت یان پۆستی پلاتفۆرم دەستکاری بکەیت." };
     storeId = existing.store_id;
+    existingPostStatus = existing.status;
     if (createsProduct && (existing.status !== "draft" || !storeId || isPlatformManager)) {
       return { status: "error", message: "بەرهەمی نوێ تەنها لەگەڵ پۆستی ڕەشنووسی فرۆشگای خۆت دروست دەکرێت." };
     }
@@ -201,7 +208,7 @@ export async function savePostAction(
     }
   }
 
-  if (postId && shareRewardFieldPresent && getMerchantCategoryForRole(role)) {
+  if (postId && existingPostStatus === "draft" && shareRewardFieldPresent && getMerchantCategoryForRole(role)) {
     const { error: rewardError } = await supabase.rpc("configure_post_share_reward_v1", {
       p_post_id: postId,
       p_reward_amount_iqd: shareRewardAmountIqd,
@@ -227,6 +234,35 @@ export async function savePostAction(
       ? "پۆستەکە پاشەکەوت کرا و بەرهەمەکەش وەک ڕەشنووس نێردرا بۆ پشکنینی بەڕێوەبەر؛ دوای پەسەندکردنی بەرهەم دەتوانیت پۆستەکە بڵاوبکەیتەوە."
       : postId ? "پۆستەکە نوێ کرایەوە." : "پۆستەکە وەک ڕەشنووس پاشەکەوت کرا.",
   };
+}
+
+function validateDraftProductForm(role: string, formData: FormData): string | null {
+  const name = value(formData, "new_product_name");
+  const categoryId = value(formData, "new_product_category_id");
+  const priceRaw = value(formData, "new_product_price_iqd");
+  const price = Number(priceRaw);
+  const unit = value(formData, "new_product_unit");
+  const stockRaw = value(formData, "new_product_stock_quantity");
+  const stock = stockRaw ? Number(stockRaw) : null;
+  const imageUrl = value(formData, "new_product_image_url");
+  const allowedUnits: Record<string, string[]> = {
+    meat_seafood: ["kg","g","piece","pack"],
+    fruits_vegetables: ["kg","g","piece","pack"],
+    supermarket: ["piece","kg","g","liter","ml","pack","bottle","box","dozen"],
+    restaurant: ["piece","kg","g","liter","ml","pack"],
+  };
+  if (name.length < 2 || name.length > 160) return "ناوی بەرهەم دەبێت لە نێوان ٢ تا ١٦٠ پیت بێت.";
+  if (!Number.isSafeInteger(price) || price < 1) return "نرخی بەرهەم بە دیناری تەواو و زیاتر لە سفر بنووسە.";
+  if (!uuidPattern.test(categoryId)) return "پۆلی بەرهەم هەڵبژێرە.";
+  if (!(allowedUnits[getMerchantCategoryForRole(role) ?? ""] ?? []).includes(unit)) return "یەکەی بەرهەم بۆ جۆری فرۆشگاکەت ڕێگەپێدراو نییە.";
+  if (stock !== null && (!Number.isFinite(stock) || stock < 0 || (unit !== "kg" && unit !== "liter" && !Number.isSafeInteger(stock)))) return "بڕی کۆگا بۆ ئەم یەکەیە نادروستە.";
+  try {
+    const parsed = new URL(imageUrl);
+    if (parsed.protocol !== "https:") throw new Error("https required");
+  } catch {
+    return "تکایە وێنەی بەرهەم بار بکە.";
+  }
+  return null;
 }
 
 async function createDraftProductForPost(
@@ -265,6 +301,9 @@ async function createDraftProductForPost(
   } catch {
     return { ok: false, message: "تکایە وێنەی بەرهەم بار بکە؛ لینکی وێنە دەبێت HTTPS بێت." };
   }
+  const { data: category, error: categoryError } = await supabase.from("catalog_categories")
+    .select("id").eq("id", categoryId).eq("is_active", true).maybeSingle();
+  if (categoryError || !category) return { ok: false, message: "پۆلی بەرهەم چالاک نییە؛ پۆلێکی تر هەڵبژێرە." };
   const fractional = unit === "kg" || unit === "liter";
   const { data: product, error: insertError } = await supabase.from("products").insert({
     store_id: storeId,
