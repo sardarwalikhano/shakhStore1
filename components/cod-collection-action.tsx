@@ -26,10 +26,7 @@ export function CodCollectionAction({
   const [successAmount, setSuccessAmount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (collectedAt) {
-      setLoadingQuote(false);
-      return;
-    }
+    if (collectedAt) return;
     let active = true;
     async function loadQuote() {
       try {
