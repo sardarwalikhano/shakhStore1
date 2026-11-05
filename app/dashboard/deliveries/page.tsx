@@ -3,7 +3,6 @@ import { MapPinned, Truck } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { OrderWorkflowAction } from "@/components/order-workflow-action";
 import { CodCollectionAction } from "@/components/cod-collection-action";
-import { getCodDeliveryFeeShare } from "@/lib/cod-allocation";
 import { DeliveryAssignmentAction, type CaptainOption } from "@/components/delivery-assignment-action";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -154,22 +153,7 @@ export default async function DeliveriesPage() {
             const recipient = textValue(address.recipient_name);
             const phone = textValue(address.phone);
             const notes = textValue(address.delivery_notes);
-            const orderConsignments = [...storeMap.entries()]
-              .filter(([, store]) => store.order_id === assignment.order_id)
-              .map(([id, store]) => ({
-                id,
-                createdAt: store.created_at,
-                itemsSubtotalIqd: store.items_subtotal_iqd,
-              }));
-            const deliveryFeeShare = order
-              ? getCodDeliveryFeeShare(
-                  order.delivery_fee_iqd,
-                  order.items_subtotal_iqd,
-                  orderConsignments,
-                  assignment.order_store_id,
-                ) ?? 0
-              : 0;
-            const expectedCodCash = (storeMap.get(assignment.order_store_id)?.items_subtotal_iqd ?? 0) + deliveryFeeShare;
+
 
             return (
               <article className="dashboard-panel" key={assignment.id}>
@@ -201,7 +185,6 @@ export default async function DeliveriesPage() {
                 {role === "captain" && order?.payment_method === "cash_on_delivery" && assignment.status === "delivered" && (
                   <CodCollectionAction
                     assignmentId={assignment.id}
-                    expectedCashIqd={expectedCodCash}
                     collectedAt={assignment.cod_collected_at}
                     collectedAmountIqd={assignment.cod_collected_iqd}
                   />
