@@ -156,7 +156,7 @@ export default async function DashboardPostsPage() {
         : `پۆستی تایبەت بە فرۆشگای ${store?.name ?? ""}; بەشداریکردن لە پۆستەکانی فرۆشگای تر ڕێگەپێدراو نییە.`}
       activePath="/dashboard/posts"
     >
-      {store?.wallet_suspended_at && <div className="dashboard-panel"><strong className="form-error">دوکانەکەت بەهۆی بەتاڵبوونی جزدانی پێشەکی ناچالاک کراوە.</strong><p>جزدان پڕ بکەرەوە و پەیوەندی بە سوپەر ئەدمینەوە بکە بۆ پشکنین و چالاککردنەوەی دوکان. تا ئەو کاتە، پۆست و بەرهەمی نوێ بڵاوناکرێنەوە.</p></div>}
+      {store?.status === "suspended" && store.wallet_suspended_at && <div className="dashboard-panel"><strong className="form-error">دوکانەکەت بەهۆی بەتاڵبوونی جزدانی پێشەکی ناچالاک کراوە.</strong><p>جزدان پڕ بکەرەوە و پەیوەندی بە سوپەر ئەدمینەوە بکە بۆ پشکنین و چالاککردنەوەی دوکان. تا ئەو کاتە، پۆست و بەرهەمی نوێ بڵاوناکرێنەوە.</p></div>}
       {pageError
         ? <div className="empty-state"><strong>نەتوانرا پۆستەکان بخوێندرێنەوە</strong><span className="muted">RLS و دەستڕاگەیشتنی Database پشکنە.</span></div>
         : <PostsManager
