@@ -64,8 +64,20 @@ export function CheckoutForm({
       const result = data && typeof data === "object" && !Array.isArray(data)
         ? data as Record<string, unknown>
         : {};
-      const orderNumber = typeof result.order_number === "string" ? result.order_number : "—";
-      const total = typeof result.total_iqd === "number" ? result.total_iqd : subtotalIqd + deliveryFee;
+      const orderId = typeof result.order_id === "string" ? result.order_id : "";
+      if (!orderId) throw new Error("ORDER_ID_MISSING");
+      // Read the persisted total after order_stores triggers have applied store-level delivery snapshots.
+      const { data: savedOrder, error: savedOrderError } = await supabase
+        .from("orders")
+        .select("order_number,total_iqd")
+        .eq("id", orderId)
+        .single();
+      if (savedOrderError || !savedOrder) {
+        throw new Error("ORDER_CREATED_TOTAL_UNAVAILABLE");
+      }
+      const orderNumber = typeof savedOrder.order_number === "string" ? savedOrder.order_number : "—";
+      const total = Number(savedOrder.total_iqd);
+      if (!Number.isFinite(total)) throw new Error("ORDER_CREATED_TOTAL_UNAVAILABLE");
       setSuccess({orderNumber,total});
       clearCart();
       idempotencyKey.current = null;
