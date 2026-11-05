@@ -35,12 +35,12 @@ async function findOwnedActiveStore(
   const category = getMerchantCategoryForRole(role);
   if (!category || !uuidPattern.test(storeId)) return null;
   const { data, error } = await supabase.from("stores")
-    .select("id,name,merchant_category,status")
+    .select("id,name,merchant_category,status,wallet_suspended_at")
     .eq("id", storeId)
     .eq("owner_id", userId)
     .eq("merchant_category", category)
     .eq("is_platform_store", false)
-    .eq("status", "active")
+    .or("status.eq.active,and(status.eq.suspended,wallet_suspended_at.not.is.null)")
     .maybeSingle();
   return error ? null : data;
 }
@@ -177,10 +177,10 @@ export async function savePostAction(
     if (!isPlatformManager) {
       storeId = value(formData, "store_id");
       const store = await findOwnedActiveStore(supabase, user.id, role, storeId);
-      if (!store) return { status: "error", message: "فرۆشگای چالاک و هاوتای ڕۆڵەکەت نەدۆزرایەوە." };
+      if (!store) return { status: "error", message: "فرۆشگای هاوتای هەژمارەکەت نەدۆزرایەوە، یان دۆخی دوکان پشتڕاست نەکرایەوە." };
     }
     if (createsProduct && (!storeId || isPlatformManager)) {
-      return { status: "error", message: "بەرهەمی فرۆشگا تەنها لە پۆستی دوکانداری چالاکدا زیاد دەکرێت." };
+      return { status: "error", message: "بەرهەمی نوێ تەنها لە پۆستی دوکانداری خۆتدا زیاد دەکرێت." };
     }
     if (productId && !(await isOrderableProductForPost(supabase, productId, storeId, user.id, role))) {
       return { status: "error", message: "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، لە هەمان فرۆشگا هەڵیبژێرە." };
