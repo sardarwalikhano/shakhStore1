@@ -1,44 +1,80 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Props = {
   assignmentId: string;
-  expectedCashIqd: number;
   collectedAt?: string | null;
   collectedAmountIqd?: number | null;
 };
 
 export function CodCollectionAction({
   assignmentId,
-  expectedCashIqd,
   collectedAt = null,
   collectedAmountIqd = null,
 }: Props) {
   const router = useRouter();
-  const [amount, setAmount] = useState(String(expectedCashIqd));
+  const [expectedCashIqd, setExpectedCashIqd] = useState<number | null>(null);
+  const [amount, setAmount] = useState("");
   const [receipt, setReceipt] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loadingQuote, setLoadingQuote] = useState(!collectedAt);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [successAmount, setSuccessAmount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (collectedAt) {
+      setLoadingQuote(false);
+      return;
+    }
+    let active = true;
+    async function loadQuote() {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error: quoteError } = await supabase.rpc("captain_get_cod_collection_quote_v1", {
+          p_assignment_id: assignmentId,
+        });
+        if (quoteError) throw quoteError;
+        const quote = data as { expected_cash_iqd?: number | string };
+        const expected = Number(quote.expected_cash_iqd);
+        if (!Number.isSafeInteger(expected) || expected <= 0) {
+          throw new Error("COD_QUOTE_INVALID");
+        }
+        if (active) {
+          setExpectedCashIqd(expected);
+          setAmount(String(expected));
+        }
+      } catch (caught) {
+        if (active) {
+          const message = caught instanceof Error ? caught.message : "";
+          setError(message || "نەتوانرا بڕی نەقدی پێویست دیاری بکرێت.");
+        }
+      } finally {
+        if (active) setLoadingQuote(false);
+      }
+    }
+    void loadQuote();
+    return () => { active = false; };
+  }, [assignmentId, collectedAt]);
 
   if (collectedAt || success) {
     return (
       <div className="dashboard-panel" style={{ marginTop: 14, borderColor: "#b9dfc7" }}>
         <strong style={{ color: "#197344" }}>وەرگرتنی نەقد پشتڕاست کراوەتەوە</strong>
         <p className="muted" style={{ margin: "5px 0 0" }}>
-          {Number(collectedAmountIqd ?? expectedCashIqd).toLocaleString("en-US")} دینار
+          {Number(collectedAmountIqd ?? successAmount ?? expectedCashIqd ?? 0).toLocaleString("en-US")} دینار
           {collectedAt ? ` — ${new Date(collectedAt).toLocaleString("ckb-IQ")}` : ""}
         </p>
       </div>
     );
   }
 
-  async function confirmCollection(event: React.FormEvent<HTMLFormElement>) {
+  async function confirmCollection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || expectedCashIqd === null) return;
     const parsedAmount = Number(amount);
     if (!Number.isSafeInteger(parsedAmount) || parsedAmount !== expectedCashIqd) {
       setError("بڕی نەقد دەبێت یەکسان بێت بە بڕی داواکراو.");
@@ -55,6 +91,7 @@ export function CodCollectionAction({
         p_receipt_reference: receipt.trim() || null,
       });
       if (rpcError) throw rpcError;
+      setSuccessAmount(parsedAmount);
       setSuccess(true);
       router.refresh();
     } catch (caught) {
@@ -71,6 +108,19 @@ export function CodCollectionAction({
     } finally {
       setBusy(false);
     }
+  }
+
+  if (loadingQuote) {
+    return <div className="dashboard-panel" style={{ marginTop: 14 }}>هەژمارکردنی بڕی نەقدی پێویست...</div>;
+  }
+
+  if (expectedCashIqd === null) {
+    return (
+      <div className="dashboard-panel" style={{ marginTop: 14 }}>
+        <strong>نەتوانرا بڕی نەقد پشتڕاست بکرێتەوە</strong>
+        {error && <p className="form-error" role="alert">{error}</p>}
+      </div>
+    );
   }
 
   return (
