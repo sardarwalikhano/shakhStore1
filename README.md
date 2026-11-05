@@ -129,7 +129,8 @@ Use the Supabase **Reset Password** email template with a link using `{{ .Confir
 - Captains can confirm COD only after their own delivery assignment reaches `delivered`. The database calculates each store consignment's share of the order-level delivery fee, validates the exact cash amount, and posts a balanced, idempotent wallet ledger transaction.
 - The order is marked paid only after every delivery assignment has a recorded COD collection. Multi-store delivery-fee rounding remainder is assigned to the final consignment.
 - `/dashboard/wallets` provides role-scoped wallet balances and ledger history. Admin roles can also inspect active commission rules; this page is read-only.
-- Cancellation, refunds, merchant payouts, and cash remittance reconciliation remain disabled pending separately approved business rules. COD collection records receipt and accrues wallet balances; it does not itself transfer physical cash or trigger a bank payout.
+- Customer cancellation is available only for the complete COD order and only before any delivery assignment is picked up. The database RPC locks the order and all consignments, rejects pickup/delivery/COD collection, restores finite product stock atomically, cancels every store-order and delivery assignment, and appends status events. It does not create a refund or wallet ledger entry.
+- Refunds after pickup or COD collection, merchant payouts, and cash remittance reconciliation remain disabled pending separately approved business rules. COD collection records receipt and accrues wallet balances; it does not itself transfer physical cash or trigger a bank payout.
 
 
 ## Customer order tracking
