@@ -108,26 +108,29 @@ export default async function DashboardPostsPage() {
   } else {
     const linkedStoreIds = [...new Set((productsResult.data ?? []).map((product) => product.store_id))];
     const linkedStores = linkedStoreIds.length
-      ? await supabase.from("stores").select("id,name,status,is_platform_store").in("id", linkedStoreIds)
+      ? await supabase.from("stores").select("id,name,status,is_platform_store,wallet_suspended_at").in("id", linkedStoreIds)
       : { data: [], error: null };
     if (linkedStores.error) productsError = linkedStores.error.message;
     else {
       const storeMap = new Map((linkedStores.data ?? [])
-        .filter((linkedStore) => linkedStore.status === "active" && !linkedStore.is_platform_store)
-        .map((linkedStore) => [linkedStore.id, linkedStore.name]));
+        .filter((linkedStore) => !linkedStore.is_platform_store
+          && (linkedStore.status === "active"
+            || (linkedStore.status === "suspended" && Boolean(linkedStore.wallet_suspended_at))))
+        .map((linkedStore) => [linkedStore.id, { name: linkedStore.name, status: linkedStore.status }]));
       const allProducts = (productsResult.data ?? []).flatMap((product) => {
-        const storeName = storeMap.get(product.store_id);
-        return storeName ? [{
-          id: product.id, name: product.name, store_name: storeName,
+        const linkedStore = storeMap.get(product.store_id);
+        return linkedStore ? [{
+          id: product.id, name: product.name, store_name: linkedStore.name,
+          store_status: linkedStore.status,
           price_iqd: product.price_iqd, unit: product.unit,
           image_url: product.image_url, status: product.status,
           is_available: product.is_available,
         }] : [];
       });
-      linkedProducts = new Map(allProducts.map((product) => [product.id, product]));
+      linkedProducts = new Map(allProducts.map(({ store_status: _storeStatus, ...product }) => [product.id, product]));
       orderableProducts = allProducts
-        .filter((product) => product.status === "published" && product.is_available)
-        .map(({ is_available: _available, ...product }) => product);
+        .filter((product) => product.store_status === "active" && product.status === "published" && product.is_available)
+        .map(({ is_available: _available, store_status: _storeStatus, ...product }) => product);
     }
   }
 
@@ -156,7 +159,7 @@ export default async function DashboardPostsPage() {
         : `پۆستی تایبەت بە فرۆشگای ${store?.name ?? ""}; بەشداریکردن لە پۆستەکانی فرۆشگای تر ڕێگەپێدراو نییە.`}
       activePath="/dashboard/posts"
     >
-      {store?.status === "suspended" && store.wallet_suspended_at && <div className="dashboard-panel"><strong className="form-error">دوکانەکەت بەهۆی بەتاڵبوونی جزدانی پێشەکی ناچالاک کراوە.</strong><p>جزدان پڕ بکەرەوە و پەیوەندی بە سوپەر ئەدمینەوە بکە بۆ پشکنین و چالاککردنەوەی دوکان. تا ئەو کاتە، پۆست و بەرهەمی نوێ بڵاوناکرێنەوە.</p></div>}
+      {store?.status === "suspended" && store.wallet_suspended_at && <div className="dashboard-panel"><strong className="form-error">دوکانەکەت بەهۆی بەتاڵبوونی جزدانی پێشەکی ناچالاک کراوە.</strong><p>دەتوانیت پۆست و بەرهەم وەک ڕەشنووس ئامادە بکەیت، نرخ و وێنە زیاد بکەیت. بڵاوکردنەوە و فرۆشتن تا پڕکردنەوەی جزدان ناچالاک دەمێننەوە؛ کاتێک باڵانسی جزدان زیاد بکرێت، سیستەم دوکانەکە بە شێوەی خۆکار چالاک دەکاتەوە.</p></div>}
       {pageError
         ? <div className="empty-state"><strong>نەتوانرا پۆستەکان بخوێندرێنەوە</strong><span className="muted">RLS و دەستڕاگەیشتنی Database پشکنە.</span></div>
         : <PostsManager
@@ -168,6 +171,7 @@ export default async function DashboardPostsPage() {
             storeId={store?.id ?? null}
             storeName={store?.name ?? null}
             storeCategory={store?.merchant_category ?? null}
+            storeStatus={store?.status ?? "active"}
           />}
     </DashboardFrame>
   );
