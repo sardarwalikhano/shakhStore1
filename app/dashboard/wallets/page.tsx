@@ -3,7 +3,6 @@ import { ArrowDownLeft, ArrowUpRight, WalletCards } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const merchantRoles = new Set(["restaurant", "supermarket", "produce_vendor", "meat_seafood_vendor"]);
 const allowedRoles = new Set([
   "customer", "captain", "admin", "super_admin",
   "restaurant", "supermarket", "produce_vendor", "meat_seafood_vendor",
@@ -39,7 +38,6 @@ export default async function WalletsPage() {
   if (!role) redirect("/dashboard");
 
   const isAdmin = role === "admin" || role === "super_admin";
-  const isMerchant = merchantRoles.has(role);
   const balanceQuery = supabase
     .from("wallet_balances")
     .select("wallet_account_id, account_key, account_type, user_id, store_id, status, balance_iqd, ledger_entry_count")
@@ -101,11 +99,6 @@ export default async function WalletsPage() {
   const name = typeof user.user_metadata?.full_name === "string"
     ? user.user_metadata.full_name
     : user.email ?? "بەکارهێنەر";
-  const accountNames = new Map((balances ?? []).map((account) => [
-    account.wallet_account_id,
-    account.store_id ? `${accountLabels[account.account_type] ?? account.account_type} — ${account.store_id.slice(0, 8)}` : accountLabels[account.account_type] ?? account.account_type,
-  ]));
-
   return (
     <DashboardFrame
       identity={{
