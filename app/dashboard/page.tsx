@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpLeft, Boxes, ClipboardList, MapPinned, Store } from "lucide-react";
+import { ArrowUpLeft, Boxes, ClipboardList, MapPinned, Store, Wallet } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
