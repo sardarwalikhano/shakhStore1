@@ -64,10 +64,12 @@ export default async function ShareRewardsDashboardPage() {
   const { data, error } = await query;
   const rows = (data ?? []) as ReferralRow[];
   const postIds = [...new Set(rows.map((row) => row.post_id))];
-  const { data: posts } = postIds.length
-    ? await supabase.from("posts").select("id,title,slug").in("id", postIds)
-    : { data: [], error: null };
-  const titles = new Map((posts ?? []).map((post) => [post.id, post.title]));
+  let posts: { id: string; title: string }[] = [];
+  if (postIds.length) {
+    const postsResult = await supabase.from("posts").select("id,title").in("id", postIds);
+    posts = postsResult.data ?? [];
+  }
+  const titles = new Map(posts.map((post) => [post.id, post.title]));
   const totalPaid = rows.filter((row) => row.status === "paid").reduce((sum, row) => sum + row.reward_amount_iqd, 0);
   const totalPending = rows.filter((row) => row.status !== "paid").reduce((sum, row) => sum + row.reward_amount_iqd, 0);
 
