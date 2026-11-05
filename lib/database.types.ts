@@ -311,6 +311,10 @@ export type Database = {
           accepted_at?: string | null
           assigned_at?: string | null
           cancelled_at?: string | null
+          cod_collected_at?: string | null
+          cod_collected_iqd?: number | null
+          cod_receipt_reference?: string | null
+          cod_transaction_id?: string | null
           captain_user_id?: string | null
           created_at?: string
           customer_id?: string
@@ -1318,6 +1322,14 @@ export type Database = {
       }
       captain_update_delivery_status_v1: {
         Args: { p_assignment_id: string; p_new_status: string; p_note?: string | null }
+        Returns: Json
+      }
+      captain_confirm_cod_collection_v1: {
+        Args: { p_assignment_id: string; p_cash_received_iqd: number; p_receipt_reference?: string | null }
+        Returns: Json
+      }
+      captain_get_cod_collection_quote_v1: {
+        Args: { p_assignment_id: string }
         Returns: Json
       }
       captain_confirm_cod_collection_v1: {
