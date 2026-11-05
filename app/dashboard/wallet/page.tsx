@@ -23,7 +23,9 @@ export default async function WalletPage() {
  const balances = (balancesResult.data ?? []) as Balance[];
  const entries = (entriesResult.data ?? []) as Entry[];
  const total = balances.reduce((sum, account) => sum + Number(account.balance_iqd), 0);
- const roleValue = user.app_metadata?.role;\n const allowedRoles: DashboardRole[] = ["super_admin", "admin", "restaurant", "supermarket", "produce_vendor", "meat_seafood_vendor", "captain", "customer"];\n const role: DashboardRole = typeof roleValue === "string" && allowedRoles.includes(roleValue as DashboardRole)\n  ? roleValue as DashboardRole\n  : null;
+ const roleValue = user.app_metadata?.role;
+ const allowedRoles: DashboardRole[] = ["super_admin", "admin", "restaurant", "supermarket", "produce_vendor", "meat_seafood_vendor", "captain", "customer"];
+ const role: DashboardRole = typeof roleValue === "string" && allowedRoles.includes(roleValue as DashboardRole)\n  ? roleValue as DashboardRole\n  : null;
  const identity = { name: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email ?? "بەکارهێنەر", email: user.email ?? null, role };
  return <DashboardFrame identity={identity} title="جزدانی من" subtitle="باڵانسی جزدان و مێژووی جووڵەکانت." activePath="/dashboard/wallet">
   <section className="dashboard-welcome">
