@@ -852,11 +852,13 @@ export type Database = {
         Row: {
           author_user_id: string
           body: string
+          category: string
           cover_image_url: string | null
           created_at: string
           excerpt: string
           id: string
           published_at: string | null
+          product_id: string | null
           slug: string
           status: string
           store_id: string | null
@@ -866,11 +868,13 @@ export type Database = {
         Insert: {
           author_user_id: string
           body: string
+          category?: string
           cover_image_url?: string | null
           created_at?: string
           excerpt: string
           id?: string
           published_at?: string | null
+          product_id?: string | null
           slug: string
           status?: string
           store_id?: string | null
@@ -880,11 +884,13 @@ export type Database = {
         Update: {
           author_user_id?: string
           body?: string
+          category?: string
           cover_image_url?: string | null
           created_at?: string
           excerpt?: string
           id?: string
           published_at?: string | null
+          product_id?: string | null
           slug?: string
           status?: string
           store_id?: string | null
@@ -893,10 +899,273 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "posts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "posts_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_share_reward_campaigns: {
+        Row: {
+          created_at: string
+          funded_at: string | null
+          id: string
+          max_claims: number | null
+          paid_amount_iqd: number
+          post_id: string
+          released_amount_iqd: number
+          reserved_amount_iqd: number
+          reward_amount_iqd: number
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          funded_at?: string | null
+          id?: string
+          max_claims: number | null
+          paid_amount_iqd?: number
+          post_id: string
+          released_amount_iqd?: number
+          reserved_amount_iqd?: number
+          reward_amount_iqd: number
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          funded_at?: string | null
+          id?: string
+          max_claims?: number
+          paid_amount_iqd?: number
+          post_id?: string
+          released_amount_iqd?: number
+          reserved_amount_iqd?: number
+          reward_amount_iqd?: number
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_share_reward_campaigns_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_share_reward_campaigns_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_share_links: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          post_id: string
+          share_code: string
+          sharer_user_id: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          post_id: string
+          share_code: string
+          sharer_user_id: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          post_id?: string
+          share_code?: string
+          sharer_user_id?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      post_share_order_attributions: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          customer_user_id: string
+          id: string
+          order_store_id: string
+          paid_at: string | null
+          post_id: string
+          reward_amount_iqd: number
+          share_link_id: string
+          sharer_user_id: string
+          status: string
+          store_id: string
+          wallet_transaction_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          customer_user_id: string
+          id?: string
+          order_store_id: string
+          paid_at?: string | null
+          post_id: string
+          reward_amount_iqd: number
+          share_link_id: string
+          sharer_user_id: string
+          status?: string
+          store_id: string
+          wallet_transaction_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          customer_user_id?: string
+          id?: string
+          order_store_id?: string
+          paid_at?: string | null
+          post_id?: string
+          reward_amount_iqd?: number
+          share_link_id?: string
+          sharer_user_id?: string
+          status?: string
+          store_id?: string
+          wallet_transaction_id?: string | null
+        }
+        Relationships: []
+      }
+      user_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          dedupe_key: string
+          id: string
+          metadata: Json
+          notification_type: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          dedupe_key: string
+          id?: string
+          metadata?: Json
+          notification_type: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          dedupe_key?: string
+          id?: string
+          metadata?: Json
+          notification_type?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      post_share_reward_claims: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          customer_user_id: string
+          id: string
+          post_id: string
+          post_slug_snapshot: string
+          post_title_snapshot: string
+          proof_url: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          reward_amount_iqd: number
+          status: string
+          updated_at: string
+          wallet_transaction_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          customer_user_id: string
+          id?: string
+          post_id: string
+          post_slug_snapshot: string
+          post_title_snapshot: string
+          proof_url: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          reward_amount_iqd: number
+          status?: string
+          updated_at?: string
+          wallet_transaction_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          customer_user_id?: string
+          id?: string
+          post_id?: string
+          post_slug_snapshot?: string
+          post_title_snapshot?: string
+          proof_url?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          reward_amount_iqd?: number
+          status?: string
+          updated_at?: string
+          wallet_transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_share_reward_claims_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "post_share_reward_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_share_reward_claims_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_share_reward_claims_wallet_transaction_id_fkey"
+            columns: ["wallet_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -1200,6 +1469,7 @@ export type Database = {
           slug: string
           status: string
           updated_at: string
+          wallet_suspended_at: string | null
         }
         Insert: {
           address_line?: string | null
@@ -1218,6 +1488,7 @@ export type Database = {
           slug: string
           status?: string
           updated_at?: string
+          wallet_suspended_at?: string | null
         }
         Update: {
           address_line?: string | null
@@ -1236,6 +1507,7 @@ export type Database = {
           slug?: string
           status?: string
           updated_at?: string
+          wallet_suspended_at?: string | null
         }
         Relationships: []
       }
@@ -1403,6 +1675,15 @@ export type Database = {
       }
     }
     Views: {
+      post_share_rewards_public: {
+        Row: {
+          max_claims: number | null
+          post_id: string | null
+          remaining_claims: number | null
+          reward_amount_iqd: number | null
+        }
+        Relationships: []
+      }
       wallet_balances: {
         Row: {
           account_key: string | null
@@ -1426,6 +1707,27 @@ export type Database = {
       }
     }
     Functions: {
+      admin_list_captain_scopes_v1: {
+        Args: never
+        Returns: {
+          email: string | null
+          email_confirmed: boolean
+          full_name: string
+          is_active: boolean
+          scope_type: string
+          user_id: string
+          zone_ids: string[]
+        }[]
+      }
+      admin_manage_captain_scope_v1: {
+        Args: {
+          p_captain_user_id: string
+          p_is_active: boolean
+          p_scope_type: string
+          p_zone_ids: string[]
+        }
+        Returns: Json
+      }
       admin_assign_delivery_captain_v1: {
         Args: { p_assignment_id: string; p_captain_user_id: string }
         Returns: Json
@@ -1478,6 +1780,10 @@ export type Database = {
         Args: { p_assignment_id: string; p_new_status: string; p_note?: string }
         Returns: Json
       }
+      create_post_share_link_v1: {
+        Args: { p_post_id: string }
+        Returns: Json
+      }
       create_order_v1: {
         Args: {
           p_address_id: string
@@ -1486,6 +1792,26 @@ export type Database = {
           p_items: Json
           p_payment_method?: string
         }
+        Returns: Json
+      }
+      configure_post_share_reward_v1: {
+        Args: {
+          p_max_claims: number | null
+          p_post_id: string
+          p_reward_amount_iqd: number
+        }
+        Returns: Json
+      }
+      change_post_status_with_share_reward_v1: {
+        Args: { p_new_status: string; p_post_id: string }
+        Returns: Json
+      }
+      submit_post_share_reward_claim_v1: {
+        Args: { p_post_id: string; p_proof_url: string }
+        Returns: Json
+      }
+      review_post_share_reward_claim_v1: {
+        Args: { p_claim_id: string; p_decision: string; p_review_note?: string | null }
         Returns: Json
       }
       current_app_role: { Args: never; Returns: string }

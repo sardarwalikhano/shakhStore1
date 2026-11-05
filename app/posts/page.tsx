@@ -13,7 +13,7 @@ export default async function PublicPostsPage() {
   }
 
   const { data, error } = await supabase.from("posts")
-    .select("id,title,slug,excerpt,published_at,store_id")
+    .select("id,title,slug,excerpt,cover_image_url,published_at,store_id")
     .eq("status", "published")
     .not("published_at", "is", null)
     .lte("published_at", new Date().toISOString())
@@ -42,6 +42,11 @@ export default async function PublicPostsPage() {
           <div className="public-post-grid">
             {(data ?? []).map((post) => (
               <article className="public-post-card" key={post.id}>
+                {post.cover_image_url && (
+                  <Link href={`/posts/${post.slug}`} className="public-post-card-image-link" aria-label={`وێنەی پۆست: ${post.title}`}>
+                    <img src={post.cover_image_url} alt={post.title} className="public-post-card-image" loading="lazy" />
+                  </Link>
+                )}
                 <div className="public-post-card-content">
                   <span className="eyebrow">{post.store_id ? storeNames.get(post.store_id) ?? "فرۆشگا" : "شاخ ستور"}</span>
                   {post.published_at && <time dateTime={post.published_at}>{new Date(post.published_at).toLocaleDateString("ckb-IQ", { dateStyle: "long" })}</time>}

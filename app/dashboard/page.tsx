@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpLeft, Boxes, ClipboardList, MapPinned, Plus, Store } from "lucide-react";
+import { ArrowUpLeft, Boxes, ClipboardList, Gift, MapPinned, Plus, Store, UserRound } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -69,6 +69,9 @@ export default async function DashboardPage() {
           <Link href="/dashboard/orders" className="dashboard-shortcut">
             <span><ClipboardList size={21} /></span><strong>داواکاریەکان</strong><small>شوێنکەوتنی داواکارییەکانت</small><ArrowUpLeft size={17} />
           </Link>
+          <Link href="/dashboard/share-rewards" className="dashboard-shortcut">
+            <span><Gift size={21} /></span><strong>پاداشتی هاوبەشکردن</strong><small>داواکاری و پاداشتەکانت</small><ArrowUpLeft size={17} />
+          </Link>
           <Link href="/dashboard/addresses" className="dashboard-shortcut">
             <span><MapPinned size={21} /></span><strong>ناونیشانەکان</strong><small>بەڕێوەبردنی شوێنی گەیاندن</small><ArrowUpLeft size={17} />
           </Link>
@@ -105,6 +108,8 @@ export default async function DashboardPage() {
                 <Link href="/dashboard/product-moderation" className="text-link">پشکنینی بەرهەم <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/posts" className="text-link">بەڕێوەبردنی پۆست و ئاگاداری <ArrowUpLeft size={17} /></Link>
                 <Link href="/dashboard/delivery-zones" className="text-link">بەڕێوەبردنی ناوچەکان <ArrowUpLeft size={17} /></Link>
+                {role === "super_admin" && <Link href="/dashboard/captains" className="text-link">بەڕێوەبردنی کاپتنەکان <UserRound size={17} /></Link>}
+                {role === "super_admin" && <Link href="/dashboard/share-rewards" className="text-link">پشکنینی داواکاری پاداشت <Gift size={17} /></Link>}
                 <Link href="/dashboard/deliveries" className="text-link">چاودێری گەیاندنەکان <ArrowUpLeft size={17} /></Link>
               </>
             )}

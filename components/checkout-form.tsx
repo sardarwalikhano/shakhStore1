@@ -55,7 +55,7 @@ export function CheckoutForm({
       if (!idempotencyKey.current) idempotencyKey.current = window.crypto.randomUUID();
       const { data, error: orderError } = await supabase.rpc("create_order_v1", {
         p_address_id: selectedAddress.id,
-        p_items: items.map(item=>({product_id:item.productId,quantity:item.quantity})),
+        p_items: items.map(item=>({product_id:item.productId,quantity:item.quantity,referral_code:item.shareCode ?? null})),
         p_idempotency_key: idempotencyKey.current,
         p_customer_note: note.trim() || undefined,
         p_payment_method: "cash_on_delivery",
@@ -72,7 +72,8 @@ export function CheckoutForm({
       router.refresh();
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "تۆمارکردنی داواکاری سەرکەوتوو نەبوو.";
-      if (message.includes("DELIVERY_ZONE_UNAVAILABLE")) setError("هێشتا ناوچەی گەیاندنی چالاک بۆ ئەم ناونیشانە دانەنراوە.");
+      if (message.includes("CANNOT_ORDER_OWN_POST")) setError("ناتوانیت پۆست یان بەرهەمی خۆت داوا بکەیت.");
+      else if (message.includes("DELIVERY_ZONE_UNAVAILABLE")) setError("هێشتا ناوچەی گەیاندنی چالاک بۆ ئەم ناونیشانە دانەنراوە.");
       else if (message.includes("DELIVERY_DISTANCE_NOT_CONFIGURED")) setError("ڕێژەی گەیاندنی کیلۆمەترێکی ئەم ناوچەیە هێشتا بە خزمەتگوزاریی مەودا نەبەستراوەتەوە.");
       else if (message.includes("INSUFFICIENT_STOCK")) setError("stockی یەکێک لە بەرهەمەکان بەشی ئەم داواکارییە ناکات. سەبەتە نوێ بکەرەوە.");
       else if (message.includes("PRODUCT_NOT_AVAILABLE") || message.includes("PRODUCT_NOT_FOUND")) setError("یەکێک لە بەرهەمەکان ئێستا بەردەست نییە یان لە سیستەمدا نەماوە.");
