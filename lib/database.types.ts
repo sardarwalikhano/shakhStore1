@@ -919,7 +919,7 @@ export type Database = {
           created_at: string
           funded_at: string | null
           id: string
-          max_claims: number | null | null
+          max_claims: number | null
           paid_amount_iqd: number
           post_id: string
           released_amount_iqd: number
@@ -933,7 +933,7 @@ export type Database = {
           created_at?: string
           funded_at?: string | null
           id?: string
-          max_claims: number | null | null
+          max_claims: number | null
           paid_amount_iqd?: number
           post_id: string
           released_amount_iqd?: number
