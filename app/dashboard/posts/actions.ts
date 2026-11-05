@@ -45,8 +45,33 @@ async function findOwnedActiveStore(
   return error ? null : data;
 }
 
+async function isOrderableProductForPost(
+  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  productId: string,
+  postStoreId: string | null,
+  userId: string,
+  role: string,
+): Promise<boolean> {
+  if (!uuidPattern.test(productId)) return false;
+  const { data: product, error: productError } = await supabase.from("products")
+    .select("id,store_id,status,is_available")
+    .eq("id", productId)
+    .maybeSingle();
+  if (productError || !product || product.status !== "published" || !product.is_available) return false;
+
+  const { data: store, error: storeError } = await supabase.from("stores")
+    .select("id,owner_id,status,is_platform_store")
+    .eq("id", product.store_id)
+    .maybeSingle();
+  if (storeError || !store || store.status !== "active" || store.is_platform_store) return false;
+  if (postStoreId && product.store_id !== postStoreId) return false;
+  if (getMerchantCategoryForRole(role) && store.owner_id !== userId) return false;
+  return true;
+}
+
 function databaseMessage(message: string): string {
   if (message.includes("posts_slug_key") || message.includes("duplicate key")) return "ئەم Slug ـە پێشتر بەکارهاتووە؛ Slug ـێکی تر هەڵبژێرە.";
+  if (message.includes("POST_PRODUCT_NOT_ORDERABLE") || message.includes("POST_PRODUCT_STORE_MISMATCH")) return "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، لە هەمان فرۆشگا بێت.";
   if (message.includes("row-level security") || message.includes("POST_AUTHOR_ROLE_REQUIRED")) return "دەسەڵاتی پۆستکردنت بۆ ئەم فرۆشگایە پشتڕاست نەکراوە.";
   return "پاشەکەوتکردنی پۆست سەرکەوتوو نەبوو؛ زانیارییەکان پشکنە.";
 }
@@ -79,6 +104,8 @@ export async function savePostAction(
   const body = value(formData, "body");
   const rawCover = value(formData, "cover_image_url");
   const postId = value(formData, "post_id");
+  const productId = value(formData, "product_id");
+  if (productId && !uuidPattern.test(productId)) return { status: "error", message: "بەرهەمی هەڵبژێردراو دروست نییە." };
 
   if (title.length < 3 || title.length > 180) return { status: "error", message: "ناونیشان دەبێت لە نێوان ٣ تا ١٨٠ پیت بێت." };
   if (!isValidPostSlug(slug)) return { status: "error", message: "Slug دەبێت بە پیتی بچووک و ژمارە و هێڵی ناوەڕاست بێت." };
@@ -106,8 +133,12 @@ export async function savePostAction(
     if (!uuidPattern.test(postId)) return { status: "error", message: "ناسنامەی پۆست دروست نییە." };
     const existing = await canManageExistingPost(supabase, user.id, role, postId);
     if (!existing) return { status: "error", message: "تەنها دەتوانیت پۆستی خۆت یان پۆستی پلاتفۆرم دەستکاری بکەیت." };
+    if (productId && !(await isOrderableProductForPost(supabase, productId, existing.store_id, user.id, role))) {
+      return { status: "error", message: "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، بەرهەمەکە لە هەمان فرۆشگا هەڵبژێرە." };
+    }
     const { error } = await supabase.from("posts").update({
       title, slug, category, excerpt, body, cover_image_url: coverImageUrl,
+      product_id: productId || null,
     }).eq("id", postId);
     if (error) return { status: "error", message: databaseMessage(error.message) };
   } else {
@@ -117,10 +148,14 @@ export async function savePostAction(
       const store = await findOwnedActiveStore(supabase, user.id, role, storeId);
       if (!store) return { status: "error", message: "فرۆشگای چالاک و هاوتای ڕۆڵەکەت نەدۆزرایەوە." };
     }
+    if (productId && !(await isOrderableProductForPost(supabase, productId, storeId, user.id, role))) {
+      return { status: "error", message: "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، بەرهەمەکە لە هەمان فرۆشگا هەڵبژێرە." };
+    }
     const { error } = await supabase.from("posts").insert({
       author_user_id: user.id,
       store_id: storeId,
       title, slug, category, excerpt, body, cover_image_url: coverImageUrl,
+      product_id: productId || null,
       status: "draft",
       published_at: null,
     });

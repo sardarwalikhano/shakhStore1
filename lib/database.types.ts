@@ -858,6 +858,7 @@ export type Database = {
           excerpt: string
           id: string
           published_at: string | null
+          product_id: string | null
           slug: string
           status: string
           store_id: string | null
@@ -873,6 +874,7 @@ export type Database = {
           excerpt: string
           id?: string
           published_at?: string | null
+          product_id?: string | null
           slug: string
           status?: string
           store_id?: string | null
@@ -888,6 +890,7 @@ export type Database = {
           excerpt?: string
           id?: string
           published_at?: string | null
+          product_id?: string | null
           slug?: string
           status?: string
           store_id?: string | null
@@ -895,6 +898,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "posts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posts_store_id_fkey"
             columns: ["store_id"]

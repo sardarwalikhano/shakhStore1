@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { DashboardFrame } from "@/components/dashboard-frame";
-import { PostsManager, type PostAuditRecord, type PostRecord } from "@/components/posts-manager";
+import { PostsManager, type OrderablePostProduct, type PostAuditRecord, type PostRecord } from "@/components/posts-manager";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMerchantCategoryForRole } from "@/lib/post-rules";
 
@@ -60,7 +60,7 @@ export default async function DashboardPostsPage() {
   }
 
   let postsQuery = supabase.from("posts")
-    .select("id,title,slug,category,excerpt,body,cover_image_url,status,published_at,store_id,updated_at")
+    .select("id,title,slug,category,excerpt,body,cover_image_url,status,published_at,store_id,product_id,updated_at")
     .order("updated_at", { ascending: false })
     .limit(100);
   if (!platformManager && store) postsQuery = postsQuery.eq("store_id", store.id);
@@ -81,7 +81,36 @@ export default async function DashboardPostsPage() {
       : { data: [], error: null };
   }
 
-  const pageError = postsResult.error || eventsResult.error;
+  let orderableProducts: OrderablePostProduct[] = [];
+  let productsError: string | null = null;
+  let productsQuery = supabase.from("products")
+    .select("id,name,store_id,price_iqd,unit")
+    .eq("status", "published")
+    .eq("is_available", true)
+    .order("name", { ascending: true })
+    .limit(200);
+  if (!platformManager && store) productsQuery = productsQuery.eq("store_id", store.id);
+  const productsResult = await productsQuery;
+  if (productsResult.error) {
+    productsError = productsResult.error.message;
+  } else {
+    const linkedStoreIds = [...new Set((productsResult.data ?? []).map((product) => product.store_id))];
+    const linkedStores = linkedStoreIds.length
+      ? await supabase.from("stores").select("id,name,status,is_platform_store").in("id", linkedStoreIds)
+      : { data: [], error: null };
+    if (linkedStores.error) productsError = linkedStores.error.message;
+    else {
+      const storeMap = new Map((linkedStores.data ?? [])
+        .filter((linkedStore) => linkedStore.status === "active" && !linkedStore.is_platform_store)
+        .map((linkedStore) => [linkedStore.id, linkedStore.name]));
+      orderableProducts = (productsResult.data ?? []).flatMap((product) => {
+        const storeName = storeMap.get(product.store_id);
+        return storeName ? [{ id: product.id, name: product.name, store_name: storeName, price_iqd: product.price_iqd, unit: product.unit }] : [];
+      });
+    }
+  }
+
+  const pageError = postsResult.error || eventsResult.error || productsError;
   const events = (eventsResult.data ?? []) as PostAuditRecord[];
 
   return (
@@ -98,6 +127,7 @@ export default async function DashboardPostsPage() {
         : <PostsManager
             posts={posts}
             events={events}
+            orderableProducts={orderableProducts}
             mode={platformManager ? "platform" : "merchant"}
             storeId={store?.id ?? null}
             storeName={store?.name ?? null}

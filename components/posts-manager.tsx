@@ -9,7 +9,14 @@ import { getPostStatusLabel, getPostStatusTargets, type PostStatus } from "@/lib
 export type PostRecord = {
   id: string; title: string; slug: string; excerpt: string; body: string;
   cover_image_url: string | null; status: PostStatus; published_at: string | null;
-  store_id: string | null; category: string; updated_at: string;
+  store_id: string | null; product_id: string | null; category: string; updated_at: string;
+};
+export type OrderablePostProduct = {
+  id: string;
+  name: string;
+  store_name: string;
+  price_iqd: number;
+  unit: string;
 };
 export type PostAuditRecord = {
   id: string; post_id: string; title_snapshot: string; action: string;
@@ -42,9 +49,17 @@ function StatusForm({ post }: { post: PostRecord }) {
   );
 }
 
-function PostEditor({ post, storeId, mode }: { post?: PostRecord; storeId?: string | null; mode: "platform" | "merchant" }) {
+function PostEditor({
+  post, storeId, mode, orderableProducts,
+}: {
+  post?: PostRecord;
+  storeId?: string | null;
+  mode: "platform" | "merchant";
+  orderableProducts: OrderablePostProduct[];
+}) {
   const [state, formAction, pending] = useActionState(savePostAction, initialState);
   const [coverUrl, setCoverUrl] = useState(post?.cover_image_url ?? "");
+  const [productId, setProductId] = useState(post?.product_id ?? "");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -101,6 +116,26 @@ function PostEditor({ post, storeId, mode }: { post?: PostRecord; storeId?: stri
         </select>
       </div>
       <div className="merchant-field merchant-field-wide">
+        <label htmlFor={`post-product-${suffix}`}>بەرهەمی پەیوەست بۆ داواکاری (ئارەزوومەندانە)</label>
+        <select
+          className="plain-field"
+          id={`post-product-${suffix}`}
+          value={productId}
+          onChange={(event) => setProductId(event.target.value)}
+        >
+          <option value="">پۆستی ئاسایی — داواکاری نییە</option>
+          {orderableProducts.map((product) => (
+            <option value={product.id} key={product.id}>
+              {product.name} — {product.price_iqd.toLocaleString("en-US")} دینار / {product.unit} · {product.store_name}
+            </option>
+          ))}
+        </select>
+        <small className="muted">تەنها بەرهەمی بڵاوکراوە و بەردەست هەڵبژێرە. بۆ پۆستی فرۆشگا، بەرهەمەکە دەبێت سەر بە هەمان فرۆشگا بێت.</small>
+        {orderableProducts.length === 0 && (
+          <small className="muted">هێشتا هیچ بەرهەمێکی بڵاوکراوە و داواکاری‌پەذیر نییە؛ سەرەتا بەرهەمێک زیاد بکە و لەلایەن بەڕێوەبەرەوە بڵاوی بکەرەوە.</small>
+        )}
+      </div>
+      <div className="merchant-field merchant-field-wide">
         <label htmlFor={`post-excerpt-${suffix}`}>پوختە *</label>
         <textarea id={`post-excerpt-${suffix}`} name="excerpt" required minLength={10} maxLength={360} rows={2} defaultValue={post?.excerpt ?? ""} />
       </div>
@@ -111,6 +146,7 @@ function PostEditor({ post, storeId, mode }: { post?: PostRecord; storeId?: stri
       <div className="merchant-field merchant-field-wide">
         
         <input type="hidden" name="cover_image_url" value={coverUrl} />
+        <input type="hidden" name="product_id" value={productId} />
         <label htmlFor={`post-cover-file-${suffix}`}>وێنەی پۆست (JPG، PNG، WEBP، AVIF تا ٥ MB)</label>
         <input ref={fileRef} id={`post-cover-file-${suffix}`} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>uploadCover(e.target.files?.[0])} />
         {uploading && <small>وێنە بار دەکرێت...</small>}
@@ -131,13 +167,14 @@ function formatDate(value: string | null) {
 }
 
 export function PostsManager({
-  posts, events, mode = "platform", storeId = null, storeName = null,
+  posts, events, mode = "platform", storeId = null, storeName = null, orderableProducts,
 }: {
   posts: PostRecord[];
   events: PostAuditRecord[];
   mode?: "platform" | "merchant";
   storeId?: string | null;
   storeName?: string | null;
+  orderableProducts: OrderablePostProduct[];
 }) {
   return (
     <div className="posts-manager">
@@ -153,7 +190,7 @@ export function PostsManager({
       </section>
       <section className="dashboard-panel">
         <h3>دروستکردنی پۆستی نوێ</h3>
-        <PostEditor storeId={storeId} mode={mode} />
+        <PostEditor storeId={storeId} mode={mode} orderableProducts={orderableProducts} />
       </section>
       <section className="dashboard-panel">
         <h3>پۆستەکان ({posts.length})</h3>
@@ -174,9 +211,19 @@ export function PostsManager({
                   <time dateTime={post.updated_at}>{formatDate(post.published_at ?? post.updated_at)}</time>
                 </div>
                 <p>{post.excerpt}</p>
+                {post.status === "draft" && (
+                  <p className="post-draft-visibility-note">
+                    ئەم پۆستە هێشتا ڕەشنووسە؛ وێنەکە دوای بڵاوکردنەوە لە پەڕە گشتییەکاندا دەردەکەوێت.
+                  </p>
+                )}
+                {post.product_id && (
+                  <p className="muted">
+                    بەرهەمی پەیوەست بۆ داواکاری: {orderableProducts.find((product) => product.id === post.product_id)?.name ?? "بەرهەمەکە لەوانەیە چیتر بەردەست نەبێت"}
+                  </p>
+                )}
                 <details>
                   <summary><Pencil size={15} /> دەستکاریکردنی ناوەڕۆک</summary>
-                  <PostEditor post={post} storeId={storeId} mode={mode} />
+                  <PostEditor post={post} storeId={storeId} mode={mode} orderableProducts={orderableProducts} />
                 </details>
                 <StatusForm post={post} />
               </article>
