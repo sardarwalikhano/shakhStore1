@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUnitLabelCkb } from "@/lib/marketplace-rules";
+import { PostShareRewardClaim } from "@/components/post-share-reward-claim";
 
 type Props = { params: Promise<{ slug: string }> };
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
   const [{ data: post, error }, { data: { user } }] = await Promise.all([
     supabase.from("posts")
-      .select("title,slug,excerpt,body,category,cover_image_url,published_at,store_id,product_id,author_user_id")
+      .select("id,title,slug,excerpt,body,category,cover_image_url,published_at,store_id,product_id,author_user_id")
       .eq("slug", slug)
       .eq("status", "published")
       .not("published_at", "is", null)
@@ -27,11 +28,27 @@ export default async function PublicPostDetailPage({ params }: Props) {
   if (error || !post) notFound();
 
   let publisher = "شاخ ستور";
+  let publisherOwnerId: string | null = null;
   if (post.store_id) {
     const { data: store } = await supabase.from("stores")
-      .select("id,name").eq("id", post.store_id).maybeSingle();
+      .select("id,name,owner_id").eq("id", post.store_id).maybeSingle();
     publisher = store?.name ?? "فرۆشگا";
+    publisherOwnerId = store?.owner_id ?? null;
   }
+
+  const [{ data: shareReward }, { data: existingShareClaim }] = await Promise.all([
+    supabase.from("post_share_rewards_public")
+      .select("reward_amount_iqd,max_claims,remaining_claims")
+      .eq("post_id", post.id)
+      .maybeSingle(),
+    user?.app_metadata?.role === "customer"
+      ? supabase.from("post_share_reward_claims")
+          .select("status,review_note")
+          .eq("post_id", post.id)
+          .eq("customer_user_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
 
   let orderProduct: {
     id: string; name: string; description: string | null; price_iqd: number;
@@ -54,6 +71,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
   const isOwnPost = Boolean(user && (
     user.id === post.author_user_id
+    || (publisherOwnerId && user.id === publisherOwnerId)
     || (orderProduct && user.id === orderProduct.store_owner_id)
   ));
   const isCustomer = user?.app_metadata?.role === "customer";
@@ -70,6 +88,39 @@ export default async function PublicPostDetailPage({ params }: Props) {
           {post.cover_image_url && <img src={post.cover_image_url} alt={post.title} className="post-article-cover" />}
           <p className="post-article-excerpt">{post.excerpt}</p>
           <div className="post-article-body">{post.body}</div>
+
+          {shareReward && shareReward.reward_amount_iqd !== null && shareReward.remaining_claims !== null && (
+            <section className="post-share-reward-card">
+              {isOwnPost ? (
+                <>
+                  <span className="eyebrow">SHARE & EARN</span>
+                  <strong>ئەم پاداشتە بۆ کڕیارانی ترە؛ خاوەنی پۆست ناتوانێت پاداشت وەربگرێت.</strong>
+                  <strong className="post-share-reward-amount">{shareReward.reward_amount_iqd.toLocaleString("en-US")} دینار</strong>
+                </>
+              ) : isCustomer ? (
+                <PostShareRewardClaim
+                  postId={post.id}
+                  rewardAmountIqd={shareReward.reward_amount_iqd}
+                  remainingClaims={shareReward.remaining_claims ?? 0}
+                  existingClaim={existingShareClaim ?? null}
+                />
+              ) : user ? (
+                <div>
+                  <span className="eyebrow">SHARE & EARN</span>
+                  <h2>پاداشتی هاوبەشکردن</h2>
+                  <strong className="post-share-reward-amount">{shareReward.reward_amount_iqd.toLocaleString("en-US")} دینار</strong>
+                  <p className="muted">بۆ داوای پاداشت، دەبێت بە هەژماری کڕیار بچیتە ژوورەوە.</p>
+                </div>
+              ) : (
+                <div>
+                  <span className="eyebrow">SHARE & EARN</span>
+                  <h2>بە هاوبەشکردنی ئەم پۆستە پاداشت وەربگرە</h2>
+                  <strong className="post-share-reward-amount">{shareReward.reward_amount_iqd.toLocaleString("en-US")} دینار</strong>
+                  <Link href="/login" className="button">چوونەژوورەوە و داوای پاداشت</Link>
+                </div>
+              )}
+            </section>
+          )}
 
           {post.product_id && !orderProduct && (
             <section className="post-order-card">
