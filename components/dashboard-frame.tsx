@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   ArrowUpLeft,
+  Bell,
   Boxes,
   ClipboardList,
   Gift,
@@ -64,6 +65,7 @@ export function DashboardFrame({
   const role = identity.role;
   const navigation = [
     { href: "/dashboard", label: "پوختە", icon: LayoutDashboard, visible: true },
+    { href: "/dashboard/notifications", label: "ئاگادارکردنەوەکان", icon: Bell, visible: role !== null },
     { href: "/dashboard/orders", label: "داواکاریەکان", icon: ClipboardList, visible: role !== null },
     { href: "/dashboard/deliveries", label: "گەیاندن", icon: Truck, visible: role === "captain" || role === "admin" || role === "super_admin" },
     { href: "/dashboard/products", label: "بەرهەمەکان", icon: Boxes, visible: merchantRoles.includes(role) },
@@ -74,7 +76,7 @@ export function DashboardFrame({
     { href: "/dashboard/merchant-applications", label: "داواکاری فرۆشگا", icon: ShieldCheck, visible: role === "admin" || role === "super_admin" },
     { href: "/dashboard/product-moderation", label: "پشکنینی بەرهەم", icon: Boxes, visible: role === "admin" || role === "super_admin" },
     { href: "/dashboard/posts", label: "پۆست و ئاگاداری", icon: Newspaper, visible: role === "admin" || role === "super_admin" || merchantRoles.includes(role) },
-    { href: "/dashboard/share-rewards", label: role === "super_admin" ? "پشکنینی پاداشت" : "پاداشتی هاوبەشکردن", icon: Gift, visible: role === "super_admin" || role === "customer" },
+    { href: "/dashboard/share-rewards", label: role === "super_admin" ? "چاودێری خەڵاتی شێر" : "پاداشتی هاوبەشکردن", icon: Gift, visible: role === "super_admin" || role === "customer" || merchantRoles.includes(role) },
   ].filter((item) => item.visible);
 
   const roleLabel = role ? roleLabels[role] : "ڕۆڵ دیاری نەکراوە";
