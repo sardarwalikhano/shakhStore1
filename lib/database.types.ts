@@ -1312,6 +1312,10 @@ export type Database = {
         }
         Returns: Json
       }
+      customer_cancel_order_before_pickup_v1: {
+        Args: { p_order_id: string; p_reason?: string | null }
+        Returns: Json
+      }
       admin_list_available_captains_v1: {
         Args: never
         Returns: { email: string | null; full_name: string; user_id: string }[]
