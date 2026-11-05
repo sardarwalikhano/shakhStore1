@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { Archive, FileText, Pencil, Plus, RotateCcw, Send } from "lucide-react";
+import { Archive, FileText, Gift, Pencil, Plus, RotateCcw, Send } from "lucide-react";
 import { savePostAction, updatePostStatusAction, type PostActionState } from "@/app/dashboard/posts/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getPostStatusLabel, getPostStatusTargets, type PostStatus } from "@/lib/post-rules";
@@ -10,6 +10,7 @@ export type PostRecord = {
   id: string; title: string; slug: string; excerpt: string; body: string;
   cover_image_url: string | null; status: PostStatus; published_at: string | null;
   store_id: string | null; product_id: string | null; category: string; updated_at: string;
+  share_reward?: PostShareRewardCampaign | null;
 };
 export type OrderablePostProduct = {
   id: string;
@@ -17,6 +18,14 @@ export type OrderablePostProduct = {
   store_name: string;
   price_iqd: number;
   unit: string;
+};
+export type PostShareRewardCampaign = {
+  post_id: string;
+  reward_amount_iqd: number;
+  max_claims: number;
+  reserved_amount_iqd: number;
+  paid_amount_iqd: number;
+  status: "configured" | "active" | "completed" | "closed";
 };
 export type PostAuditRecord = {
   id: string; post_id: string; title_snapshot: string; action: string;
@@ -50,16 +59,29 @@ function StatusForm({ post }: { post: PostRecord }) {
 }
 
 function PostEditor({
-  post, storeId, mode, orderableProducts,
+  post, storeId, mode, orderableProducts, merchantWalletBalanceIqd,
 }: {
   post?: PostRecord;
   storeId?: string | null;
   mode: "platform" | "merchant";
   orderableProducts: OrderablePostProduct[];
+  merchantWalletBalanceIqd: number | null;
 }) {
   const [state, formAction, pending] = useActionState(savePostAction, initialState);
   const [coverUrl, setCoverUrl] = useState(post?.cover_image_url ?? "");
   const [productId, setProductId] = useState(post?.product_id ?? "");
+  const [shareRewardAmount, setShareRewardAmount] = useState(
+    String(post?.share_reward?.reward_amount_iqd ?? 0),
+  );
+  const [shareRewardMaxClaims, setShareRewardMaxClaims] = useState(
+    String(post?.share_reward?.max_claims ?? 10),
+  );
+  const rewardLocked = Boolean(post && (
+    post.status !== "draft"
+    || (post.share_reward && post.share_reward.status !== "configured")
+  ));
+  const rewardBudget = Math.max(0, Number(shareRewardAmount) || 0)
+    * Math.max(0, Number(shareRewardMaxClaims) || 0);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -135,6 +157,76 @@ function PostEditor({
           <small className="muted">هێشتا هیچ بەرهەمێکی بڵاوکراوە و داواکاری‌پەذیر نییە؛ سەرەتا بەرهەمێک زیاد بکە و لەلایەن بەڕێوەبەرەوە بڵاوی بکەرەوە.</small>
         )}
       </div>
+      {mode === "merchant" && (
+        <section className="merchant-field merchant-field-wide post-share-reward-editor">
+          <div className="post-share-reward-editor-heading">
+            <span className="post-share-reward-icon"><Gift size={21} /></span>
+            <div>
+              <strong>خەڵات بۆ هاوبەشکردنی پۆست</strong>
+              <small className="muted">کڕیار پۆستەکە هاوبەش دەکات و بەڵگە دەنێرێت؛ سوپەر ئەدمین دوای پشکنین پاداشتەکە دەگوازێتەوە بۆ جزدانی کڕیار.</small>
+            </div>
+          </div>
+          <input type="hidden" name="share_reward_amount_iqd" value={shareRewardAmount} />
+          <input type="hidden" name="share_reward_max_claims" value={shareRewardMaxClaims} />
+          <div className="post-share-reward-fields">
+            <label htmlFor={`share-reward-amount-${suffix}`}>
+              پاداشت بۆ هەر هاوبەشکردن (دینار)
+              <input
+                className="plain-field"
+                id={`share-reward-amount-${suffix}`}
+                type="number"
+                min="0"
+                max="10000000"
+                step="1"
+                value={shareRewardAmount}
+                readOnly={rewardLocked}
+                onChange={(event) => setShareRewardAmount(event.target.value)}
+              />
+            </label>
+            <label htmlFor={`share-reward-max-${suffix}`}>
+              زۆرترین ژمارەی پاداشت
+              <input
+                className="plain-field"
+                id={`share-reward-max-${suffix}`}
+                type="number"
+                min="1"
+                max="1000"
+                step="1"
+                value={shareRewardMaxClaims}
+                readOnly={rewardLocked || Number(shareRewardAmount) <= 0}
+                onChange={(event) => setShareRewardMaxClaims(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="post-share-reward-budget">
+            {Number(shareRewardAmount) > 0 ? (
+              <>
+                <span>بودجەی پێویست پێش بڵاوکردنەوە</span>
+                <strong>{rewardBudget.toLocaleString("en-US")} دینار</strong>
+                <small className="muted">
+                  {Number(shareRewardAmount).toLocaleString("en-US")} × {Number(shareRewardMaxClaims).toLocaleString("en-US")} کڕیار
+                </small>
+              </>
+            ) : (
+              <span className="muted">بۆ ئەم پۆستە پاداشت دانەنراوە.</span>
+            )}
+          </div>
+          {merchantWalletBalanceIqd !== null && Number(shareRewardAmount) > 0 && (
+            <small className={merchantWalletBalanceIqd >= rewardBudget ? "form-success" : "form-error"}>
+              باڵانسی جزدانی پێشەکی: {merchantWalletBalanceIqd.toLocaleString("en-US")} دینار
+              {merchantWalletBalanceIqd < rewardBudget ? " · باڵانسی جزدان بەشی بودجەکە ناکات." : " · باڵانسی پێویست هەیە."}
+            </small>
+          )}
+          {post?.share_reward && post.share_reward.status !== "configured" && (
+            <small className="muted">
+              دۆخی بودجە: {post.share_reward.status === "active" ? "پارەکە پارێزراوە و پۆستەکە چالاکە" : post.share_reward.status === "completed" ? "هەموو پاداشتەکان دراون" : "پاداشت داخراوە"}.
+              بودجەی پارێزراو: {post.share_reward.reserved_amount_iqd.toLocaleString("en-US")} دینار؛ دراو: {post.share_reward.paid_amount_iqd.toLocaleString("en-US")} دینار.
+            </small>
+          )}
+          {rewardLocked && <small className="muted">دوای پاراستنی بودجە و بڵاوکردنەوە، بڕی پاداشت و ژمارەی سوودمەندان ناگۆڕدرێت.</small>}
+          {!post && <small className="muted">بودجەکە کاتێک پۆستەکە بڵاو دەکرێتەوە لە جزدانی فرۆشگا دەگوازرێتەوە بۆ هەژماری پارێزراوی شاخ ستور؛ ئەگەر باڵانس بەشی نەکات، بڵاوکردنەوە ڕەت دەکرێتەوە.</small>}
+        </section>
+      )}
       <div className="merchant-field merchant-field-wide">
         <label htmlFor={`post-excerpt-${suffix}`}>پوختە *</label>
         <textarea id={`post-excerpt-${suffix}`} name="excerpt" required minLength={10} maxLength={360} rows={2} defaultValue={post?.excerpt ?? ""} />
@@ -167,7 +259,7 @@ function formatDate(value: string | null) {
 }
 
 export function PostsManager({
-  posts, events, mode = "platform", storeId = null, storeName = null, orderableProducts,
+  posts, events, mode = "platform", storeId = null, storeName = null, orderableProducts, merchantWalletBalanceIqd = null,
 }: {
   posts: PostRecord[];
   events: PostAuditRecord[];
@@ -175,6 +267,7 @@ export function PostsManager({
   storeId?: string | null;
   storeName?: string | null;
   orderableProducts: OrderablePostProduct[];
+  merchantWalletBalanceIqd?: number | null;
 }) {
   return (
     <div className="posts-manager">
@@ -190,7 +283,7 @@ export function PostsManager({
       </section>
       <section className="dashboard-panel">
         <h3>دروستکردنی پۆستی نوێ</h3>
-        <PostEditor storeId={storeId} mode={mode} orderableProducts={orderableProducts} />
+        <PostEditor storeId={storeId} mode={mode} orderableProducts={orderableProducts} merchantWalletBalanceIqd={merchantWalletBalanceIqd} />
       </section>
       <section className="dashboard-panel">
         <h3>پۆستەکان ({posts.length})</h3>
@@ -221,9 +314,15 @@ export function PostsManager({
                     بەرهەمی پەیوەست بۆ داواکاری: {orderableProducts.find((product) => product.id === post.product_id)?.name ?? "بەرهەمەکە لەوانەیە چیتر بەردەست نەبێت"}
                   </p>
                 )}
+                {post.share_reward && (
+                  <p className="muted">
+                    پاداشتی هاوبەشکردن: {post.share_reward.reward_amount_iqd.toLocaleString("en-US")} دینار × {post.share_reward.max_claims.toLocaleString("en-US")} کەس ·
+                    {post.share_reward.status === "configured" ? " چاوەڕێی بڵاوکردنەوە" : post.share_reward.status === "active" ? " چالاک" : post.share_reward.status === "completed" ? " تەواو" : " داخراو"}
+                  </p>
+                )}
                 <details>
                   <summary><Pencil size={15} /> دەستکاریکردنی ناوەڕۆک</summary>
-                  <PostEditor post={post} storeId={storeId} mode={mode} orderableProducts={orderableProducts} />
+                  <PostEditor post={post} storeId={storeId} mode={mode} orderableProducts={orderableProducts} merchantWalletBalanceIqd={merchantWalletBalanceIqd} />
                 </details>
                 <StatusForm post={post} />
               </article>

@@ -6,6 +6,7 @@ import {
   ArrowUpLeft,
   Boxes,
   ClipboardList,
+  Gift,
   LayoutDashboard,
   MapPinned,
   Newspaper,
@@ -73,6 +74,7 @@ export function DashboardFrame({
     { href: "/dashboard/merchant-applications", label: "داواکاری فرۆشگا", icon: ShieldCheck, visible: role === "admin" || role === "super_admin" },
     { href: "/dashboard/product-moderation", label: "پشکنینی بەرهەم", icon: Boxes, visible: role === "admin" || role === "super_admin" },
     { href: "/dashboard/posts", label: "پۆست و ئاگاداری", icon: Newspaper, visible: role === "admin" || role === "super_admin" || merchantRoles.includes(role) },
+    { href: "/dashboard/share-rewards", label: role === "super_admin" ? "پشکنینی پاداشت" : "پاداشتی هاوبەشکردن", icon: Gift, visible: role === "super_admin" || role === "customer" },
   ].filter((item) => item.visible);
 
   const roleLabel = role ? roleLabels[role] : "ڕۆڵ دیاری نەکراوە";

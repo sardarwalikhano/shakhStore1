@@ -576,3 +576,43 @@ img { max-width: 100%; }
 .post-order-actions p{margin:0}
 .post-draft-visibility-note{padding:9px 12px;border-radius:10px;background:#fff5e8;color:#81501c;font-size:.88rem}
 @media(max-width:540px){.post-order-product{grid-template-columns:1fr}.post-order-product>img,.post-order-product-placeholder{width:100%;height:190px}}
+
+/* Share & Earn merchant reward configuration */
+.post-share-reward-editor{display:grid;gap:14px;padding:17px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface-secondary,#f7f8f6)}
+.post-share-reward-editor-heading,.post-share-reward-heading{display:flex;align-items:flex-start;gap:12px}
+.post-share-reward-editor-heading strong,.post-share-reward-heading h2{display:block;margin:0 0 4px}
+.post-share-reward-editor-heading small{display:block;line-height:1.7}
+.post-share-reward-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:13px;background:rgba(217,107,36,.12);color:var(--color-primary-strong,#a64a16)}
+.post-share-reward-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.post-share-reward-fields label,.post-share-reward-form label{display:grid;gap:7px;font-weight:700}
+.post-share-reward-fields input,.post-share-reward-form input{width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);color:var(--color-text)}
+.post-share-reward-fields input[readonly]{opacity:.75;cursor:not-allowed}
+.post-share-reward-budget{display:grid;gap:4px;padding:12px 14px;border-radius:11px;background:var(--color-surface);border:1px solid var(--color-border)}
+.post-share-reward-budget strong,.post-share-reward-amount{font-size:1.35rem;font-weight:850;color:var(--color-primary-strong,#a64a16)}
+.post-share-reward-card{display:grid;gap:14px;margin-top:24px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-secondary,#f7f8f6)}
+.post-share-reward-card h2{margin:0 0 6px;font-size:1.15rem}
+.post-share-reward-card p{margin:0;line-height:1.75}
+.post-share-reward-heading{align-items:center}
+.post-share-reward-heading>div{display:grid;gap:3px}
+.post-share-reward-amount{display:block}
+.post-share-reward-pending{padding:10px 12px;border-radius:10px;background:#fff4d6;color:#805600}
+.post-share-reward-form{display:grid;gap:10px}
+.post-share-reward-form .button{justify-self:start}
+.share-reward-claims{display:grid;gap:16px}
+.share-reward-claim-list{display:grid;gap:14px}
+.share-reward-claim-card{display:grid;gap:12px}
+.share-reward-claim-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.share-reward-claim-heading h3{margin:8px 0 3px}
+.share-reward-claim-heading p{margin:0}
+.share-reward-claim-heading>strong{white-space:nowrap}
+.share-reward-proof-link{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.share-reward-proof-link a{display:inline-flex;align-items:center;gap:6px;color:var(--color-primary-strong);font-weight:750}
+.share-reward-review-form{display:grid;gap:10px;border-top:1px solid var(--color-border);padding-top:14px}
+.share-reward-review-form textarea{width:100%;min-height:70px;padding:10px 12px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);color:var(--color-text)}
+.share-reward-review-actions{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:640px){
+ .post-share-reward-fields{grid-template-columns:1fr}
+ .post-share-reward-form .button,.share-reward-review-actions .button{width:100%}
+ .share-reward-review-actions{display:grid}
+ .share-reward-claim-heading{flex-direction:column}
+}

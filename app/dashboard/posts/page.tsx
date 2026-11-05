@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { DashboardFrame } from "@/components/dashboard-frame";
-import { PostsManager, type OrderablePostProduct, type PostAuditRecord, type PostRecord } from "@/components/posts-manager";
+import { PostsManager, type OrderablePostProduct, type PostAuditRecord, type PostRecord, type PostShareRewardCampaign } from "@/components/posts-manager";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMerchantCategoryForRole } from "@/lib/post-rules";
 
@@ -67,6 +67,20 @@ export default async function DashboardPostsPage() {
 
   const postsResult = await postsQuery;
   const posts = (postsResult.data ?? []) as PostRecord[];
+  const postIdsForRewards = posts.map((post) => post.id);
+  let campaigns = new Map<string, PostShareRewardCampaign>();
+  let campaignsError: string | null = null;
+  if (postIdsForRewards.length > 0) {
+    const campaignResult = await supabase.from("post_share_reward_campaigns")
+      .select("post_id,reward_amount_iqd,max_claims,reserved_amount_iqd,paid_amount_iqd,status")
+      .in("post_id", postIdsForRewards);
+    if (campaignResult.error) {
+      campaignsError = campaignResult.error.message;
+    } else {
+      campaigns = new Map((campaignResult.data ?? []).map((campaign) => [campaign.post_id, campaign as PostShareRewardCampaign]));
+    }
+  }
+  const postsWithRewards = posts.map((post) => ({ ...post, share_reward: campaigns.get(post.id) ?? null }));
   let eventsResult;
   if (platformManager) {
     eventsResult = await supabase.from("post_audit_events")
@@ -110,7 +124,17 @@ export default async function DashboardPostsPage() {
     }
   }
 
-  const pageError = postsResult.error || eventsResult.error || productsError;
+  let merchantWalletBalanceIqd: number | null = null;
+  if (!platformManager && store) {
+    const { data: wallet } = await supabase.from("wallet_balances")
+      .select("balance_iqd")
+      .eq("account_type", "merchant")
+      .eq("store_id", store.id)
+      .maybeSingle();
+    merchantWalletBalanceIqd = wallet?.balance_iqd ?? null;
+  }
+
+  const pageError = postsResult.error || eventsResult.error || productsError || campaignsError;
   const events = (eventsResult.data ?? []) as PostAuditRecord[];
 
   return (
@@ -125,9 +149,10 @@ export default async function DashboardPostsPage() {
       {pageError
         ? <div className="empty-state"><strong>نەتوانرا پۆستەکان بخوێندرێنەوە</strong><span className="muted">RLS و دەستڕاگەیشتنی Database پشکنە.</span></div>
         : <PostsManager
-            posts={posts}
+            posts={postsWithRewards}
             events={events}
             orderableProducts={orderableProducts}
+            merchantWalletBalanceIqd={merchantWalletBalanceIqd}
             mode={platformManager ? "platform" : "merchant"}
             storeId={store?.id ?? null}
             storeName={store?.name ?? null}
