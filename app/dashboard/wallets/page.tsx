@@ -124,8 +124,8 @@ export default async function WalletsPage() {
               <article className="dashboard-panel" key={account.wallet_account_id}>
                 <div className="dashboard-topbar">
                   <div>
-                    <span className="role-badge">{accountLabels[account.account_type] ?? account.account_type}</span>
-                    <h3>{account.store_id ? `فرۆشگا ${account.store_id.slice(0, 8)}` : account.account_key}</h3>
+                    <span className="role-badge">{accountLabels[account.account_type ?? ""] ?? account.account_type ?? "جزدان"}</span>
+                    <h3>{account.store_id ? `فرۆشگا ${account.store_id.slice(0, 8)}` : account.account_key ?? "—"}</h3>
                   </div>
                   <WalletCards size={22} />
                 </div>
