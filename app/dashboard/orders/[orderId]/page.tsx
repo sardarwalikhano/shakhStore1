@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowRight, ClipboardList, MapPin, PackageCheck, Truck } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
+import { CustomerCancelOrderAction } from "@/components/customer-cancel-order-action";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getActorLabel,
@@ -84,6 +85,11 @@ export default async function CustomerOrderTrackingPage({ params }: Props) {
     : {};
   const recipient = getSafeSnapshotText(address.recipient_name);
   const phone = getSafeSnapshotText(address.phone);
+  const canCustomerCancel = role === "customer"
+    && order.payment_method === "cash_on_delivery"
+    && order.payment_status === "pending"
+    && order.status !== "cancelled"
+    && !deliveries.some((delivery) => ["picked_up", "on_the_way", "delivered"].includes(delivery.status) || delivery.picked_up_at !== null);
   const paymentMethod = order.payment_method === "cash_on_delivery"
     ? "پارەدان لە کاتی گەیاندن"
     : order.payment_method === "shakh_wallet"
@@ -120,6 +126,14 @@ export default async function CustomerOrderTrackingPage({ params }: Props) {
             <strong>{formatMoney(order.total_iqd)}</strong>
           </div>
         </section>
+
+        {canCustomerCancel ? (
+          <section className="dashboard-panel">
+            <h3>هەڵوەشاندنەوەی داواکاری</h3>
+            <p className="muted">تەنها پێش وەرگرتنی کاڵا لەلایەن کاپتن، دەتوانیت تەواوی داواکارییەکە هەڵبوەشێنیتەوە.</p>
+            <CustomerCancelOrderAction orderId={order.id} />
+          </section>
+        ) : null}
 
         {queryError ? (
           <div className="empty-state">
