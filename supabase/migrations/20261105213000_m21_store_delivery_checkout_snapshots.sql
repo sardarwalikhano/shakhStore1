@@ -1,6 +1,5 @@
 -- M21: apply per-store delivery fee snapshots at order-store creation.
--- Updates persisted order totals after all store rows are inserted; checkout RPC
--- response is refreshed by the subsequent checkout-function integration.
+-- Recalculate persisted order totals whenever a store row changes.
 create or replace function private.snapshot_store_delivery_fee_v1()
 returns trigger language plpgsql security definer set search_path=''
 as $$
@@ -47,6 +46,7 @@ create trigger snapshot_store_delivery_fee_v1
 before insert on public.order_stores
 for each row execute function private.snapshot_store_delivery_fee_v1();
 
+-- PostgreSQL does not allow UPDATE OF to be combined with INSERT/DELETE events.
 create trigger refresh_order_store_delivery_total_v1
- after insert or update of delivery_fee_iqd or delete on public.order_stores
+ after insert or update or delete on public.order_stores
  for each row execute function private.refresh_order_store_delivery_total_v1();
