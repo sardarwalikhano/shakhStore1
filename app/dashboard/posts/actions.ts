@@ -89,7 +89,7 @@ async function canManageExistingPost(
   postId: string,
 ) {
   const { data: post, error } = await supabase.from("posts")
-    .select("id,author_user_id,store_id,status,slug")
+    .select("id,author_user_id,store_id,product_id,status,slug")
     .eq("id", postId)
     .maybeSingle();
   if (error || !post) return null;
