@@ -34,7 +34,7 @@ export default async function DashboardPostsPage() {
     </DashboardFrame>;
   }
 
-  let store: { id: string; name: string; status: string; merchant_category: string; wallet_suspended_at: string | null } | null = null;
+  let store: { id: string; name: string; status: string; merchant_category: string | null; wallet_suspended_at: string | null } | null = null;
   let storeError: string | null = null;
   if (!platformManager && merchantCategory) {
     const { data, error } = await supabase.from("stores")
