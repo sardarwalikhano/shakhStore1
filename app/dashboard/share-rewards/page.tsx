@@ -1,9 +1,21 @@
 import { redirect } from "next/navigation";
+import { Gift } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
-import { ShareRewardClaimsManager, type ShareRewardClaimView } from "@/components/share-reward-claims-manager";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+type ReferralRow = {
+  id: string;
+  post_id: string;
+  order_store_id: string;
+  sharer_user_id: string;
+  store_id: string;
+  reward_amount_iqd: number;
+  status: "pending" | "pending_wallet" | "paid";
+  created_at: string;
+  paid_at: string | null;
+};
 
 export default async function ShareRewardsDashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -28,47 +40,58 @@ export default async function ShareRewardsDashboardPage() {
     );
   }
 
-  let claimsQuery = supabase.from("post_share_reward_claims")
-    .select("id,post_id,post_title_snapshot,post_slug_snapshot,customer_user_id,reward_amount_iqd,proof_url,status,created_at,review_note")
+  let query = supabase.from("post_share_order_attributions")
+    .select("id,post_id,order_store_id,sharer_user_id,store_id,reward_amount_iqd,status,created_at,paid_at")
     .order("created_at", { ascending: false })
-    .limit(200);
-  if (isCustomer) claimsQuery = claimsQuery.eq("customer_user_id", user.id);
-  const { data: rows, error } = await claimsQuery;
-
-  let customerNames = new Map<string, string>();
-  if (isAdmin && (rows ?? []).length > 0) {
-    const ids = [...new Set((rows ?? []).map((claim) => claim.customer_user_id))];
-    const { data: profiles } = await supabase.from("profiles")
-      .select("id,full_name")
-      .in("id", ids);
-    customerNames = new Map((profiles ?? []).map((profile) => [
-      profile.id,
-      profile.full_name?.trim() || "کڕیار",
-    ]));
-  }
-
-  const claims: ShareRewardClaimView[] = (rows ?? []).map((claim) => ({
-    ...claim,
-    status: claim.status as ShareRewardClaimView["status"],
-    customer_name: isAdmin ? customerNames.get(claim.customer_user_id) ?? "کڕیار" : "هەژماری من",
-  }));
+    .limit(500);
+  if (isCustomer) query = query.eq("sharer_user_id", user.id);
+  const { data, error } = await query;
+  const rows = (data ?? []) as ReferralRow[];
+  const postIds = [...new Set(rows.map((row) => row.post_id))];
+  const { data: posts } = postIds.length
+    ? await supabase.from("posts").select("id,title,slug").in("id", postIds)
+    : { data: [], error: null };
+  const titles = new Map((posts ?? []).map((post) => [post.id, post.title]));
+  const totalPaid = rows.filter((row) => row.status === "paid").reduce((sum, row) => sum + row.reward_amount_iqd, 0);
+  const totalPending = rows.filter((row) => row.status !== "paid").reduce((sum, row) => sum + row.reward_amount_iqd, 0);
 
   return (
     <DashboardFrame
       identity={identity}
-      title={isAdmin ? "پشکنینی داواکاری پاداشت" : "پاداشتی هاوبەشکردنی من"}
+      title={isAdmin ? "چاودێری خەڵاتی Share & Earn" : "کڕین و خەڵاتەکانی من"}
       subtitle={isAdmin
-        ? "بەڵگەی هاوبەشکردن بپشکنە؛ تەنها دوای پشتڕاستکردنەوە پاداشت بۆ جزدانی کڕیار بنێرە."
-        : "داواکاری پاداشتەکانت و دۆخی پشکنین و گواستنەوەی پارە لێرە ببینە."}
+        ? "هەموو پاداشتەکانی بەستراو بە کڕینی تەواوبوو و دۆخی گواستنەوەی پارە."
+        : "هەر داواکارییەک کە لە لینکی تۆوە بکرێت و بگەیەنرێت، لێرە وەک خەڵات تۆمار دەکرێت."}
       activePath="/dashboard/share-rewards"
     >
       {error ? (
-        <div className="empty-state">
-          <strong>نەتوانرا داواکارییەکانی پاداشت بخوێندرێنەوە</strong>
-          <span className="muted">RLS و دەستڕاگەیشتنی Supabase پشکنە.</span>
-        </div>
+        <div className="empty-state"><strong>نەتوانرا مێژووی خەڵاتەکان بخوێندرێتەوە</strong><span className="muted">دەستڕاگەیشتنی داتابەیس پشکنە.</span></div>
       ) : (
-        <ShareRewardClaimsManager claims={claims} mode={isAdmin ? "admin" : "customer"} />
+        <>
+          <section className="dashboard-stats-grid">
+            <article className="dashboard-stat-card"><span>کڕینە پەیوەستەکان</span><strong>{rows.length.toLocaleString("en-US")}</strong></article>
+            <article className="dashboard-stat-card"><span>خەڵاتی دراو</span><strong>{totalPaid.toLocaleString("en-US")} دینار</strong></article>
+            <article className="dashboard-stat-card"><span>خەڵاتی چاوەڕوان</span><strong>{totalPending.toLocaleString("en-US")} دینار</strong></article>
+          </section>
+          <section className="dashboard-panel">
+            <div className="section-heading"><div><h2><Gift size={18} /> مێژووی کڕینەکان</h2><p>خەڵات تەنها دوای گەیاندنی داواکاری لە جزدانی خاوەنی پۆست کەم و بۆ جزدانی تۆ زیاد دەکرێت.</p></div></div>
+            {rows.length === 0 ? (
+              <div className="empty-state"><strong>هێشتا کڕینێکی خەڵاتدار تۆمار نەکراوە.</strong><span className="muted">لینکی تایبەتی پۆستێکی خەڵاتدار دروست بکە و هاوبەشی بکە.</span></div>
+            ) : (
+              <div className="table-wrap"><table className="data-table">
+                <thead><tr><th>پۆست</th><th>بڕی خەڵات</th><th>دۆخ</th><th>کات</th></tr></thead>
+                <tbody>{rows.map((row) => (
+                  <tr key={row.id}>
+                    <td>{titles.get(row.post_id) ?? "پۆستی ئەرشیفکراو"}</td>
+                    <td>{row.reward_amount_iqd.toLocaleString("en-US")} دینار</td>
+                    <td>{row.status === "paid" ? "دراوە" : row.status === "pending_wallet" ? "چاوەڕێی پڕکردنەوەی جزدان" : "چاوەڕێی گەیاندن"}</td>
+                    <td>{new Date(row.paid_at ?? row.created_at).toLocaleString("ckb-IQ")}</td>
+                  </tr>
+                ))}</tbody>
+              </table></div>
+            )}
+          </section>
+        </>
       )}
     </DashboardFrame>
   );
