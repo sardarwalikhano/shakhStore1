@@ -1,28 +1,34 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { Archive, FileText, Gift, Pencil, Plus, RotateCcw, Send } from "lucide-react";
+import { Archive, FileText, Gift, ImagePlus, Pencil, Plus, RotateCcw, Send } from "lucide-react";
 import { savePostAction, updatePostStatusAction, type PostActionState } from "@/app/dashboard/posts/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getPostStatusLabel, getPostStatusTargets, type PostStatus } from "@/lib/post-rules";
 
+export type LinkedPostProduct = {
+  id: string;
+  name: string;
+  price_iqd: number;
+  unit: string;
+  image_url: string | null;
+  status: string;
+};
 export type PostRecord = {
   id: string; title: string; slug: string; excerpt: string; body: string;
   cover_image_url: string | null; status: PostStatus; published_at: string | null;
   store_id: string | null; product_id: string | null; category: string; updated_at: string;
+  linked_product?: LinkedPostProduct | null;
   share_reward?: PostShareRewardCampaign | null;
 };
-export type OrderablePostProduct = {
-  id: string;
-  name: string;
+export type OrderablePostProduct = LinkedPostProduct & {
   store_name: string;
-  price_iqd: number;
-  unit: string;
 };
+export type ProductCategoryOption = { id: string; name_ckb: string };
 export type PostShareRewardCampaign = {
   post_id: string;
   reward_amount_iqd: number;
-  max_claims: number;
+  max_claims: number | null;
   reserved_amount_iqd: number;
   paid_amount_iqd: number;
   status: "configured" | "active" | "completed" | "closed";
@@ -32,6 +38,29 @@ export type PostAuditRecord = {
   previous_status: string | null; new_status: string; actor_role: string; created_at: string;
 };
 const initialState: PostActionState = { status: "idle", message: "" };
+
+const unitsByStore: Record<string, { value: string; label: string }[]> = {
+  meat_seafood: [
+    { value: "kg", label: "کیلۆگرام" }, { value: "g", label: "گرام" },
+    { value: "piece", label: "دانە" }, { value: "pack", label: "پاکەت" },
+  ],
+  fruits_vegetables: [
+    { value: "kg", label: "کیلۆگرام" }, { value: "g", label: "گرام" },
+    { value: "piece", label: "دانە" }, { value: "pack", label: "پاکەت" },
+  ],
+  supermarket: [
+    { value: "piece", label: "دانە" }, { value: "kg", label: "کیلۆگرام" },
+    { value: "g", label: "گرام" }, { value: "liter", label: "لیتر" },
+    { value: "ml", label: "ملی‌لیتر" }, { value: "pack", label: "پاکەت" },
+    { value: "bottle", label: "بوتڵ" }, { value: "box", label: "کارتۆن" },
+    { value: "dozen", label: "دەستە (١٢ دانە)" },
+  ],
+  restaurant: [
+    { value: "piece", label: "دانە" }, { value: "kg", label: "کیلۆگرام" },
+    { value: "g", label: "گرام" }, { value: "liter", label: "لیتر" },
+    { value: "ml", label: "ملی‌لیتر" }, { value: "pack", label: "پاکەت" },
+  ],
+};
 
 function actionLabel(status: string) {
   if (status === "published") return "بڵاوکردنەوە";
@@ -59,73 +88,97 @@ function StatusForm({ post }: { post: PostRecord }) {
 }
 
 function PostEditor({
-  post, storeId, mode, orderableProducts, merchantWalletBalanceIqd,
+  post, storeId, storeCategory, mode, orderableProducts, productCategories,
 }: {
   post?: PostRecord;
   storeId?: string | null;
+  storeCategory?: string | null;
   mode: "platform" | "merchant";
   orderableProducts: OrderablePostProduct[];
-  merchantWalletBalanceIqd: number | null;
+  productCategories: ProductCategoryOption[];
 }) {
   const [state, formAction, pending] = useActionState(savePostAction, initialState);
   const [coverUrl, setCoverUrl] = useState(post?.cover_image_url ?? "");
-  const [productId, setProductId] = useState(post?.product_id ?? "");
-  const [shareRewardAmount, setShareRewardAmount] = useState(
-    String(post?.share_reward?.reward_amount_iqd ?? 0),
+  const [productId, setProductId] = useState(
+    post?.linked_product && post.linked_product.status !== "published" ? post.linked_product.id : post?.product_id ?? "",
   );
-  const [shareRewardMaxClaims, setShareRewardMaxClaims] = useState(
-    String(post?.share_reward?.max_claims ?? 10),
+  const [shareRewardAmount, setShareRewardAmount] = useState(String(post?.share_reward?.reward_amount_iqd ?? 0));
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductPrice, setNewProductPrice] = useState("");
+  const [newProductCategory, setNewProductCategory] = useState(productCategories[0]?.id ?? "");
+  const [newProductUnit, setNewProductUnit] = useState(
+    storeCategory === "meat_seafood" || storeCategory === "fruits_vegetables" ? "kg" : "piece",
   );
-  const rewardLocked = Boolean(post && (
-    post.status !== "draft"
-    || (post.share_reward && post.share_reward.status !== "configured")
-  ));
-  const rewardBudget = Math.max(0, Number(shareRewardAmount) || 0)
-    * Math.max(0, Number(shareRewardMaxClaims) || 0);
-  const [uploading, setUploading] = useState(false);
+  const [newProductStock, setNewProductStock] = useState("");
+  const [newProductImageUrl, setNewProductImageUrl] = useState("");
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingProduct, setUploadingProduct] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
-  async function uploadCover(file?: File) {
+  const [productUploadError, setProductUploadError] = useState("");
+  const coverFileRef = useRef<HTMLInputElement>(null);
+  const productFileRef = useRef<HTMLInputElement>(null);
+  const rewardLocked = Boolean(post && post.status !== "draft");
+  const units = unitsByStore[storeCategory ?? "supermarket"] ?? unitsByStore.supermarket;
+  const suffix = post?.id ?? "new";
+
+  async function uploadImage(file: File | undefined, kind: "cover" | "product") {
     if (!file) return;
-    setUploadError("");
+    const setError = kind === "cover" ? setUploadError : setProductUploadError;
+    const setBusy = kind === "cover" ? setUploadingCover : setUploadingProduct;
+    setError("");
     if (!["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-      setUploadError("JPG، PNG، WEBP یان AVIF تا ٥ MB هەڵبژێرە.");
-      if (fileRef.current) fileRef.current.value = "";
+      setError("تەنها JPG، PNG، WEBP یان AVIF تا ٥ MB پەسەندە.");
       return;
     }
-    setUploading(true);
+    if (kind === "product" && !storeId) {
+      setError("فرۆشگای چالاک نەدۆزرایەوە بۆ بارکردنی وێنەی بەرهەم.");
+      return;
+    }
+    setBusy(true);
     try {
       const supabase = createSupabaseBrowserClient();
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error("پێویستە بچیتە ژوورەوە.");
       const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-      const path = `post-covers/${user.id}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("product-images").upload(path, file, { contentType: file.type });
+      const path = kind === "cover"
+        ? "post-covers/" + user.id + "/" + crypto.randomUUID() + "." + ext
+        : storeId + "/" + user.id + "/" + crypto.randomUUID() + "." + ext;
+      const { error } = await supabase.storage.from("product-images").upload(path, file, {
+        contentType: file.type,
+        cacheControl: "31536000",
+        upsert: false,
+      });
       if (error) throw error;
-      setCoverUrl(supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl);
+      const publicUrl = supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+      if (kind === "cover") setCoverUrl(publicUrl);
+      else setNewProductImageUrl(publicUrl);
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "بارکردنی وێنە سەرکەوتوو نەبوو.");
+      setError(error instanceof Error ? error.message : "بارکردنی وێنە سەرکەوتوو نەبوو.");
     } finally {
-      setUploading(false);
+      setBusy(false);
     }
   }
-  const suffix = post?.id ?? "new";
+
+  const selectedProduct = orderableProducts.find((product) => product.id === productId);
+  const linkedProduct = post?.linked_product ?? null;
+  const showNewProductForm = mode === "merchant" && Boolean(storeId) && !post?.product_id;
+
   return (
     <form id={!post ? "new-post-editor" : undefined} action={formAction} className="merchant-form post-editor-form">
       {post && <input type="hidden" name="post_id" value={post.id} />}
       {!post && storeId && <input type="hidden" name="store_id" value={storeId} />}
       <div className="merchant-field">
-        <label htmlFor={`post-title-${suffix}`}>ناونیشان *</label>
-        <input className="plain-field" id={`post-title-${suffix}`} name="title" required minLength={3} maxLength={180} defaultValue={post?.title ?? ""} />
+        <label htmlFor={"post-title-" + suffix}>ناونیشان *</label>
+        <input className="plain-field" id={"post-title-" + suffix} name="title" required minLength={3} maxLength={180} defaultValue={post?.title ?? ""} />
       </div>
       <div className="merchant-field">
-        <label htmlFor={`post-slug-${suffix}`}>Slug *</label>
-        <input className="plain-field" id={`post-slug-${suffix}`} name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={180} defaultValue={post?.slug ?? ""} dir="ltr" />
+        <label htmlFor={"post-slug-" + suffix}>Slug *</label>
+        <input className="plain-field" id={"post-slug-" + suffix} name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={180} defaultValue={post?.slug ?? ""} dir="ltr" />
       </div>
       <div className="merchant-field">
-        <label htmlFor={`post-category-${suffix}`}>کاتەگۆری *</label>
-        <select id={`post-category-${suffix}`} name="category" defaultValue={post?.category ?? "general"} required>
+        <label htmlFor={"post-category-" + suffix}>کاتەگۆری *</label>
+        <select id={"post-category-" + suffix} name="category" defaultValue={post?.category ?? "general"} required>
           <option value="general">گشتی</option>
           <option value="offers">ئۆفەر و داشکاندن</option>
           <option value="products">بەرهەمەکان</option>
@@ -137,117 +190,104 @@ function PostEditor({
           <option value="supermarket">سوپەرمارکێت</option>
         </select>
       </div>
+
       <div className="merchant-field merchant-field-wide">
-        <label htmlFor={`post-product-${suffix}`}>بەرهەمی پەیوەست بۆ داواکاری (ئارەزوومەندانە)</label>
-        <select
-          className="plain-field"
-          id={`post-product-${suffix}`}
-          value={productId}
-          onChange={(event) => setProductId(event.target.value)}
-        >
-          <option value="">پۆستی ئاسایی — داواکاری نییە</option>
+        <label htmlFor={"post-product-" + suffix}>بەرهەمی بڵاوکراوە بۆ داواکاری</label>
+        <select className="plain-field" id={"post-product-" + suffix} name="product_id" value={productId} onChange={(event) => setProductId(event.target.value)}>
+          <option value="">پۆستی ئاسایی — بەرهەمی پەیوەست نییە</option>
+          {linkedProduct && linkedProduct.status !== "published" && (
+            <option value={linkedProduct.id}>بەرهەمی ڕەشنووس: {linkedProduct.name} — چاوەڕێی پشکنین</option>
+          )}
           {orderableProducts.map((product) => (
             <option value={product.id} key={product.id}>
               {product.name} — {product.price_iqd.toLocaleString("en-US")} دینار / {product.unit} · {product.store_name}
             </option>
           ))}
         </select>
-        <small className="muted">تەنها بەرهەمی بڵاوکراوە و بەردەست هەڵبژێرە. بۆ پۆستی فرۆشگا، بەرهەمەکە دەبێت سەر بە هەمان فرۆشگا بێت.</small>
-        {orderableProducts.length === 0 && (
-          <small className="muted">هێشتا هیچ بەرهەمێکی بڵاوکراوە و داواکاری‌پەذیر نییە؛ سەرەتا بەرهەمێک زیاد بکە و لەلایەن بەڕێوەبەرەوە بڵاوی بکەرەوە.</small>
+        {selectedProduct && (
+          <div className="post-linked-product-preview">
+            {selectedProduct.image_url && <img src={selectedProduct.image_url} alt={selectedProduct.name} />}
+            <div><strong>{selectedProduct.name}</strong><bdi>{selectedProduct.price_iqd.toLocaleString("en-US")} دینار / {selectedProduct.unit}</bdi></div>
+          </div>
         )}
+        {linkedProduct && linkedProduct.status !== "published" && (
+          <div className="post-linked-product-preview">
+            {linkedProduct.image_url && <img src={linkedProduct.image_url} alt={linkedProduct.name} />}
+            <div><strong>{linkedProduct.name}</strong><bdi>{linkedProduct.price_iqd.toLocaleString("en-US")} دینار / {linkedProduct.unit}</bdi><small className="muted">ڕەشنووسە؛ دوای پەسەندکردنی بەڕێوەبەر دەتوانرێت داوا بکرێت.</small></div>
+          </div>
+        )}
+        <small className="muted">بەرهەمێکی پێشتر بڵاوکراوە هەڵبژێرە، یان بەرهەمی نوێ لە خانەی خوارەوە لەگەڵ نرخ و وێنە دروست بکە.</small>
       </div>
+
+      {showNewProductForm && (
+        <section className="merchant-field merchant-field-wide post-inline-product-editor">
+          <div className="post-share-reward-editor-heading">
+            <span className="post-share-reward-icon"><ImagePlus size={21} /></span>
+            <div><strong>بەرهەم، نرخ و وێنە بۆ ئەم پۆستە</strong><small className="muted">بەرهەمەکە لەگەڵ پۆستەکە پاشەکەوت دەکرێت و وەک ڕەشنووس بۆ پشکنینی بەڕێوەبەر دەنێردرێت. تا پەسەند نەکرێت، داواکاری و بڵاوکردنەوەی پۆست ڕێگەپێدراو نابێت.</small></div>
+          </div>
+          <div className="post-share-reward-fields">
+            <label>ناوی بەرهەم *<input className="plain-field" name="new_product_name" value={newProductName} onChange={(event) => setNewProductName(event.target.value)} minLength={2} maxLength={160} /></label>
+            <label>نرخی فرۆشتن بە دینار *<input className="plain-field" name="new_product_price_iqd" type="number" min="1" step="1" value={newProductPrice} onChange={(event) => setNewProductPrice(event.target.value)} /></label>
+            <label>پۆلی بەرهەم *<select className="plain-field" name="new_product_category_id" value={newProductCategory} onChange={(event) => setNewProductCategory(event.target.value)}><option value="">پۆل هەڵبژێرە</option>{productCategories.map((category) => <option key={category.id} value={category.id}>{category.name_ckb}</option>)}</select></label>
+            <label>یەکە *<select className="plain-field" name="new_product_unit" value={newProductUnit} onChange={(event) => setNewProductUnit(event.target.value)}>{units.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</select></label>
+            <label>بڕی کۆگا (ئارەزوومەندانە)<input className="plain-field" name="new_product_stock_quantity" type="number" min="0" step={newProductUnit === "kg" || newProductUnit === "liter" ? "0.1" : "1"} value={newProductStock} onChange={(event) => setNewProductStock(event.target.value)} /></label>
+          </div>
+          <input type="hidden" name="new_product_image_url" value={newProductImageUrl} />
+          <div className="post-product-image-upload">
+            <label htmlFor={"post-product-image-" + suffix}>وێنەی بەرهەم * (JPG، PNG، WEBP، AVIF تا ٥ MB)</label>
+            <input ref={productFileRef} id={"post-product-image-" + suffix} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={(event) => uploadImage(event.target.files?.[0], "product")} />
+            {uploadingProduct && <small>وێنەی بەرهەم بار دەکرێت...</small>}
+            {productUploadError && <p className="form-error" role="alert">{productUploadError}</p>}
+            {newProductImageUrl && <div className="post-linked-product-preview"><img src={newProductImageUrl} alt="پێشبینینی وێنەی بەرهەم" /><strong>وێنەی بەرهەم ئامادەیە</strong><button type="button" className="button button-secondary" onClick={() => { setNewProductImageUrl(""); if (productFileRef.current) productFileRef.current.value = ""; }}>گۆڕینی وێنە</button></div>}
+          </div>
+          {productCategories.length === 0 && <p className="form-error">هیچ پۆلێکی بەرهەمی چالاک نییە؛ سوپەر ئەدمین دەبێت پۆلێک چالاک بکات.</p>}
+        </section>
+      )}
+
       {mode === "merchant" && (
         <section className="merchant-field merchant-field-wide post-share-reward-editor">
           <div className="post-share-reward-editor-heading">
             <span className="post-share-reward-icon"><Gift size={21} /></span>
             <div>
-              <strong>خەڵات بۆ هاوبەشکردنی پۆست</strong>
-              <small className="muted">کڕیار پۆستەکە هاوبەش دەکات و بەڵگە دەنێرێت؛ سوپەر ئەدمین دوای پشکنین پاداشتەکە دەگوازێتەوە بۆ جزدانی کڕیار.</small>
+              <strong>خەڵات بۆ هەر کڕینی تەواوبوو</strong>
+              <small className="muted">کڕیار لینکی تایبەتی خۆی دروست دەکات. کاتێک داواکارییەک لەو لینکەوە تەواو بگات، ئەم بڕە لە جزدانی پێشەکی خاوەنی پۆست کەم و بۆ جزدانی خاوەن لینک زیاد دەکرێت.</small>
             </div>
           </div>
-          <input type="hidden" name="share_reward_amount_iqd" value={shareRewardAmount} />
-          <input type="hidden" name="share_reward_max_claims" value={shareRewardMaxClaims} />
-          <div className="post-share-reward-fields">
-            <label htmlFor={`share-reward-amount-${suffix}`}>
-              پاداشت بۆ هەر هاوبەشکردن (دینار)
-              <input
-                className="plain-field"
-                id={`share-reward-amount-${suffix}`}
-                type="number"
-                min="0"
-                max="10000000"
-                step="1"
-                value={shareRewardAmount}
-                readOnly={rewardLocked}
-                onChange={(event) => setShareRewardAmount(event.target.value)}
-              />
-            </label>
-            <label htmlFor={`share-reward-max-${suffix}`}>
-              زۆرترین ژمارەی پاداشت
-              <input
-                className="plain-field"
-                id={`share-reward-max-${suffix}`}
-                type="number"
-                min="1"
-                max="1000"
-                step="1"
-                value={shareRewardMaxClaims}
-                readOnly={rewardLocked || Number(shareRewardAmount) <= 0}
-                onChange={(event) => setShareRewardMaxClaims(event.target.value)}
-              />
-            </label>
-          </div>
+          <label htmlFor={"share-reward-amount-" + suffix}>
+            خەڵات بۆ هەر داواکارییەکی گەیەنراو (دینار)
+            <input className="plain-field" id={"share-reward-amount-" + suffix} name="share_reward_amount_iqd" type="number" min="0" max="10000000" step="1" value={shareRewardAmount} readOnly={rewardLocked} onChange={(event) => setShareRewardAmount(event.target.value)} />
+          </label>
           <div className="post-share-reward-budget">
             {Number(shareRewardAmount) > 0 ? (
-              <>
-                <span>بودجەی پێویست پێش بڵاوکردنەوە</span>
-                <strong>{rewardBudget.toLocaleString("en-US")} دینار</strong>
-                <small className="muted">
-                  {Number(shareRewardAmount).toLocaleString("en-US")} × {Number(shareRewardMaxClaims).toLocaleString("en-US")} کڕیار
-                </small>
-              </>
-            ) : (
-              <span className="muted">بۆ ئەم پۆستە پاداشت دانەنراوە.</span>
-            )}
+              <><strong>{Number(shareRewardAmount).toLocaleString("en-US")} دینار بۆ هەر کڕینێک</strong><small className="muted">سنووری ژمارەی کڕین نییە؛ هیچ بڕێک لە کاتی بڵاوکردنەوە بلۆک ناکرێت.</small></>
+            ) : <span className="muted">بۆ ئەم پۆستە خەڵات دانەنراوە.</span>}
           </div>
-          {merchantWalletBalanceIqd !== null && Number(shareRewardAmount) > 0 && (
-            <small className={merchantWalletBalanceIqd >= rewardBudget ? "form-success" : "form-error"}>
-              باڵانسی جزدانی پێشەکی: {merchantWalletBalanceIqd.toLocaleString("en-US")} دینار
-              {merchantWalletBalanceIqd < rewardBudget ? " · باڵانسی جزدان بەشی بودجەکە ناکات." : " · باڵانسی پێویست هەیە."}
-            </small>
-          )}
-          {post?.share_reward && post.share_reward.status !== "configured" && (
-            <small className="muted">
-              دۆخی بودجە: {post.share_reward.status === "active" ? "پارەکە پارێزراوە و پۆستەکە چالاکە" : post.share_reward.status === "completed" ? "هەموو پاداشتەکان دراون" : "پاداشت داخراوە"}.
-              بودجەی پارێزراو: {post.share_reward.reserved_amount_iqd.toLocaleString("en-US")} دینار؛ دراو: {post.share_reward.paid_amount_iqd.toLocaleString("en-US")} دینار.
-            </small>
-          )}
-          {rewardLocked && <small className="muted">دوای پاراستنی بودجە و بڵاوکردنەوە، بڕی پاداشت و ژمارەی سوودمەندان ناگۆڕدرێت.</small>}
-          {!post && <small className="muted">بودجەکە کاتێک پۆستەکە بڵاو دەکرێتەوە لە جزدانی فرۆشگا دەگوازرێتەوە بۆ هەژماری پارێزراوی شاخ ستور؛ ئەگەر باڵانس بەشی نەکات، بڵاوکردنەوە ڕەت دەکرێتەوە.</small>}
+          {post?.share_reward && <small className="muted">کۆی خەڵاتی گوازراوەتەوە: {post.share_reward.paid_amount_iqd.toLocaleString("en-US")} دینار. دۆخ: {post.share_reward.status === "active" ? "چالاک" : post.share_reward.status === "configured" ? "چاوەڕێی بڵاوکردنەوە" : "داخراو"}.</small>}
+          {rewardLocked && <small className="muted">بڕی خەڵات دوای بڵاوکردنەوە ناگۆڕدرێت.</small>}
         </section>
       )}
+
       <div className="merchant-field merchant-field-wide">
-        <label htmlFor={`post-excerpt-${suffix}`}>پوختە *</label>
-        <textarea id={`post-excerpt-${suffix}`} name="excerpt" required minLength={10} maxLength={360} rows={2} defaultValue={post?.excerpt ?? ""} />
+        <label htmlFor={"post-excerpt-" + suffix}>پوختە *</label>
+        <textarea id={"post-excerpt-" + suffix} name="excerpt" required minLength={10} maxLength={360} rows={2} defaultValue={post?.excerpt ?? ""} />
       </div>
       <div className="merchant-field merchant-field-wide">
-        <label htmlFor={`post-body-${suffix}`}>ناوەڕۆک *</label>
-        <textarea id={`post-body-${suffix}`} name="body" required minLength={20} maxLength={30000} rows={8} defaultValue={post?.body ?? ""} />
+        <label htmlFor={"post-body-" + suffix}>ناوەڕۆک *</label>
+        <textarea id={"post-body-" + suffix} name="body" required minLength={20} maxLength={30000} rows={8} defaultValue={post?.body ?? ""} />
       </div>
       <div className="merchant-field merchant-field-wide">
-        
         <input type="hidden" name="cover_image_url" value={coverUrl} />
-        <input type="hidden" name="product_id" value={productId} />
-        <label htmlFor={`post-cover-file-${suffix}`}>وێنەی پۆست (JPG، PNG، WEBP، AVIF تا ٥ MB)</label>
-        <input ref={fileRef} id={`post-cover-file-${suffix}`} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>uploadCover(e.target.files?.[0])} />
-        {uploading && <small>وێنە بار دەکرێت...</small>}
+        <label htmlFor={"post-cover-file-" + suffix}>وێنەی سەرەکی پۆست (JPG، PNG، WEBP، AVIF تا ٥ MB)</label>
+        <input ref={coverFileRef} id={"post-cover-file-" + suffix} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={(event) => uploadImage(event.target.files?.[0], "cover")} />
+        {uploadingCover && <small>وێنەی پۆست بار دەکرێت...</small>}
         {uploadError && <p className="form-error" role="alert">{uploadError}</p>}
-        {coverUrl && <div><img src={coverUrl} alt="پێشبینینی وێنەی پۆست" style={{maxWidth:220,maxHeight:150,objectFit:"contain"}}/><button type="button" onClick={()=>setCoverUrl("")}>لابردنی وێنە</button></div>}
+        {coverUrl && <div className="post-linked-product-preview"><img src={coverUrl} alt="پێشبینینی وێنەی پۆست" /><button type="button" className="button button-secondary" onClick={() => { setCoverUrl(""); if (coverFileRef.current) coverFileRef.current.value = ""; }}>لابردنی وێنە</button></div>}
       </div>
       {state.message && <p className={state.status === "success" ? "form-success merchant-field-wide" : "form-error merchant-field-wide"} role={state.status === "success" ? "status" : "alert"}>{state.message}</p>}
       <div className="merchant-field-wide">
-        <button className="button" type="submit" disabled={pending || uploading}><Pencil size={16} /> {pending ? "پاشەکەوت دەکرێت..." : post ? "نوێکردنەوەی پۆست" : "پاشەکەوتکردنی ڕەشنووس"}</button>
+        <button className="button" type="submit" disabled={pending || uploadingCover || uploadingProduct}>
+          <Pencil size={16} /> {pending ? "پاشەکەوت دەکرێت..." : post ? "نوێکردنەوەی پۆست" : "پاشەکەوتکردنی ڕەشنووس"}
+        </button>
       </div>
     </form>
   );
@@ -259,15 +299,17 @@ function formatDate(value: string | null) {
 }
 
 export function PostsManager({
-  posts, events, mode = "platform", storeId = null, storeName = null, orderableProducts, merchantWalletBalanceIqd = null,
+  posts, events, mode = "platform", storeId = null, storeName = null, storeCategory = null,
+  orderableProducts, productCategories,
 }: {
   posts: PostRecord[];
   events: PostAuditRecord[];
   mode?: "platform" | "merchant";
   storeId?: string | null;
   storeName?: string | null;
+  storeCategory?: string | null;
   orderableProducts: OrderablePostProduct[];
-  merchantWalletBalanceIqd?: number | null;
+  productCategories: ProductCategoryOption[];
 }) {
   return (
     <div className="posts-manager">
@@ -275,7 +317,7 @@ export function PostsManager({
         <span className="role-badge"><FileText size={15} /> {mode === "merchant" ? "پۆستی فرۆشگا" : "پۆستی پلاتفۆرم"}</span>
         <h2>{mode === "merchant" ? storeName ?? "فرۆشگای من" : "بڵاوکراوە و ئاگادارییەکانی شاخ"}</h2>
         <p>{mode === "merchant"
-          ? "پۆستەکانت تەنها بە ناوی ئەم فرۆشگایە بڵاودەبنەوە؛ پۆستی فرۆشگا و پلاتفۆرم لە یەکتر جیاوازن."
+          ? "پۆستەکانت تەنها بە ناوی ئەم فرۆشگایە بڵاودەبنەوە؛ نرخ و وێنەی بەرهەم لە هەمان فۆڕم زیاد بکە."
           : "پۆستەکانی ئەم بەشە بە ناوی شاخ ستور بڵاودەبنەوە."}</p>
         <div className="dashboard-welcome-actions post-create-toolbar">
           <a href="#new-post-editor" className="button"><Plus size={18} /> دروستکردنی پۆستی نوێ</a>
@@ -283,7 +325,7 @@ export function PostsManager({
       </section>
       <section className="dashboard-panel">
         <h3>دروستکردنی پۆستی نوێ</h3>
-        <PostEditor storeId={storeId} mode={mode} orderableProducts={orderableProducts} merchantWalletBalanceIqd={merchantWalletBalanceIqd} />
+        <PostEditor storeId={storeId} storeCategory={storeCategory} mode={mode} orderableProducts={orderableProducts} productCategories={productCategories} />
       </section>
       <section className="dashboard-panel">
         <h3>پۆستەکان ({posts.length})</h3>
@@ -304,25 +346,17 @@ export function PostsManager({
                   <time dateTime={post.updated_at}>{formatDate(post.published_at ?? post.updated_at)}</time>
                 </div>
                 <p>{post.excerpt}</p>
-                {post.status === "draft" && (
-                  <p className="post-draft-visibility-note">
-                    ئەم پۆستە هێشتا ڕەشنووسە؛ وێنەکە دوای بڵاوکردنەوە لە پەڕە گشتییەکاندا دەردەکەوێت.
-                  </p>
+                {post.status === "draft" && <p className="post-draft-visibility-note">ئەم پۆستە هێشتا ڕەشنووسە؛ دوای پەسەندکردنی بەرهەم دەتوانرێت بڵاوبکرێتەوە.</p>}
+                {post.linked_product && (
+                  <div className="post-linked-product-preview">
+                    {post.linked_product.image_url && <img src={post.linked_product.image_url} alt={post.linked_product.name} loading="lazy" />}
+                    <div><strong>{post.linked_product.name}</strong><bdi>{post.linked_product.price_iqd.toLocaleString("en-US")} دینار / {post.linked_product.unit}</bdi><small className="muted">{post.linked_product.status === "published" ? "بڵاوکراوە" : "ڕەشنووس ـ چاوەڕێی پشکنین"}</small></div>
+                  </div>
                 )}
-                {post.product_id && (
-                  <p className="muted">
-                    بەرهەمی پەیوەست بۆ داواکاری: {orderableProducts.find((product) => product.id === post.product_id)?.name ?? "بەرهەمەکە لەوانەیە چیتر بەردەست نەبێت"}
-                  </p>
-                )}
-                {post.share_reward && (
-                  <p className="muted">
-                    پاداشتی هاوبەشکردن: {post.share_reward.reward_amount_iqd.toLocaleString("en-US")} دینار × {post.share_reward.max_claims.toLocaleString("en-US")} کەس ·
-                    {post.share_reward.status === "configured" ? " چاوەڕێی بڵاوکردنەوە" : post.share_reward.status === "active" ? " چالاک" : post.share_reward.status === "completed" ? " تەواو" : " داخراو"}
-                  </p>
-                )}
+                {post.share_reward && <p className="muted">خەڵات: {post.share_reward.reward_amount_iqd.toLocaleString("en-US")} دینار بۆ هەر کڕینی گەیەنراو · {post.share_reward.status === "configured" ? "چاوەڕێی بڵاوکردنەوە" : post.share_reward.status === "active" ? "چالاک" : "داخراو"}</p>}
                 <details>
                   <summary><Pencil size={15} /> دەستکاریکردنی ناوەڕۆک</summary>
-                  <PostEditor post={post} storeId={storeId} mode={mode} orderableProducts={orderableProducts} merchantWalletBalanceIqd={merchantWalletBalanceIqd} />
+                  <PostEditor post={post} storeId={storeId} storeCategory={storeCategory} mode={mode} orderableProducts={orderableProducts} productCategories={productCategories} />
                 </details>
                 <StatusForm post={post} />
               </article>
@@ -338,8 +372,7 @@ export function PostsManager({
               <thead><tr><th>پۆست</th><th>کردار</th><th>گۆڕانی دۆخ</th><th>بەڕێوەبەر</th><th>کات</th></tr></thead>
               <tbody>{events.map((event) => (
                 <tr key={event.id}>
-                  <td>{event.title_snapshot}</td>
-                  <td>{event.action}</td>
+                  <td>{event.title_snapshot}</td><td>{event.action}</td>
                   <td>{event.previous_status ? `${getPostStatusLabel(event.previous_status)} ← ${getPostStatusLabel(event.new_status)}` : getPostStatusLabel(event.new_status)}</td>
                   <td>{event.actor_role === "super_admin" ? "سوپەر ئەدمین" : event.actor_role === "admin" ? "بەڕێوەبەر" : event.actor_role === "restaurant" ? "دوکانداری چێشتخانە" : event.actor_role === "supermarket" ? "دوکانداری سوپەرمارکێت" : event.actor_role === "produce_vendor" ? "فرۆشیاری سەوزە و میوە" : event.actor_role === "meat_seafood_vendor" ? "فرۆشیاری گۆشت و سپیاتی" : "بەکارهێنەر"}</td>
                   <td>{formatDate(event.created_at)}</td>
