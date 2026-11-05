@@ -157,6 +157,11 @@ begin
 end;
 $function$;
 
+drop trigger if exists posts_enforce_orderable_product on public.posts;
+create trigger posts_enforce_orderable_product
+before insert or update of product_id, store_id, status on public.posts
+for each row execute function private.enforce_post_orderable_product_v1();
+
 create or replace function private.configure_post_share_reward_v1(
   p_post_id uuid,
   p_reward_amount_iqd bigint,
@@ -419,7 +424,7 @@ begin
   on conflict (account_key) do nothing;
 
   insert into public.post_share_links (campaign_id, post_id, store_id, sharer_user_id, share_code)
-  values (v_campaign.id, v_post.id, v_campaign.store_id, v_actor, encode(gen_random_bytes(20), 'hex'))
+  values (v_campaign.id, v_post.id, v_campaign.store_id, v_actor, encode(extensions.gen_random_bytes(20), 'hex'))
   on conflict (campaign_id, sharer_user_id)
   do update set is_active = true, updated_at = now()
   returning share_code into v_share_code;
