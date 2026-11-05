@@ -36,9 +36,17 @@ begin
  from public.order_stores os where os.order_id=v_order_id;
  update public.orders o
  set delivery_fee_iqd=v_fee_total,
-     total_iqd=o.items_subtotal_iqd-v_coalesce_discount(o.discount_iqd)+v_fee_total+o.tax_iqd,
+     total_iqd=o.items_subtotal_iqd-coalesce(o.discount_iqd,0)+v_fee_total+coalesce(o.tax_iqd,0),
      updated_at=now()
  where o.id=v_order_id;
  return coalesce(new,old);
 end;
 $$;
+
+create trigger snapshot_store_delivery_fee_v1
+before insert on public.order_stores
+for each row execute function private.snapshot_store_delivery_fee_v1();
+
+create trigger refresh_order_store_delivery_total_v1
+ after insert or update of delivery_fee_iqd or delete on public.order_stores
+ for each row execute function private.refresh_order_store_delivery_total_v1();
