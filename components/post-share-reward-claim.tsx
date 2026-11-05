@@ -1,51 +1,53 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Gift, Link2, Send } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Gift, Link2, Copy, Share2, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import {
-  submitPostShareRewardClaimAction,
-  type ShareRewardActionState,
-} from "@/app/dashboard/share-rewards/actions";
-
-const initialState: ShareRewardActionState = { status: "idle", message: "" };
-
-type ExistingClaim = {
-  status: string;
-  review_note: string | null;
-};
+import { createPostShareLinkAction } from "@/app/dashboard/share-rewards/actions";
 
 export function PostShareRewardClaim({
   postId,
+  postSlug,
   rewardAmountIqd,
-  remainingClaims,
-  existingClaim,
 }: {
   postId: string;
+  postSlug: string;
   rewardAmountIqd: number;
-  remainingClaims: number;
-  existingClaim: ExistingClaim | null;
 }) {
-  const [state, formAction, pending] = useActionState(submitPostShareRewardClaimAction, initialState);
-  const [shareMessage, setShareMessage] = useState("");
+  const [url, setUrl] = useState("");
+  const [message, setMessage] = useState("");
+  const [pending, startTransition] = useTransition();
 
-  async function sharePost() {
-    const url = window.location.href;
+  function createLink() {
+    setMessage("");
+    startTransition(async () => {
+      const result = await createPostShareLinkAction(postId);
+      if (!result.ok || !result.shareCode) {
+        setMessage(result.message);
+        return;
+      }
+      setUrl(window.location.origin + "/posts/" + encodeURIComponent(postSlug) + "?ref=" + encodeURIComponent(result.shareCode));
+      setMessage("لینکی تایبەتت دروست کرا. هەر داواکارییەک کە لەو لینکەوە بکرێت و تەواو بگات، خەڵاتەکەی دەچێتە جزدانی تۆ.");
+    });
+  }
+
+  async function copyLink() {
+    if (!url) return;
     try {
-      if (navigator.share) {
-        await navigator.share({ title: document.title, text: "ئەم پۆستە لە شاخ ستور ببینە", url });
-        setShareMessage("لینکی پۆست هاوبەش کرا. دوای بڵاوکردنەوە، لینکی بەڵگەکە لە خانەی خوارەوە بنووسە.");
-      } else {
-        await navigator.clipboard.writeText(url);
-        setShareMessage("لینکی پۆست کۆپی کرا. لە تۆڕی کۆمەڵایەتی دایبنێ و لینکی بڵاوکراوەکە بنێرە.");
-      }
+      await navigator.clipboard.writeText(url);
+      setMessage("لینکی تایبەت کۆپی کرا.");
     } catch {
-      try {
-        await navigator.clipboard.writeText(url);
-        setShareMessage("لینکی پۆست کۆپی کرا. لە تۆڕی کۆمەڵایەتی دایبنێ و لینکی بڵاوکراوەکە بنێرە.");
-      } catch {
-        setShareMessage("نەتوانرا لینکەکە کۆپی بکرێت؛ لینکی پەڕەکە بە دەستی کۆپی بکە.");
-      }
+      setMessage("نەتوانرا لینکەکە کۆپی بکرێت؛ دەقی لینکی خوارەوە دەستنووس بکە.");
+    }
+  }
+
+  async function shareLink() {
+    if (!url) return;
+    try {
+      if (navigator.share) await navigator.share({ title: document.title, text: "پۆستەکە لە شاخ ستور ببینە", url });
+      else await copyLink();
+    } catch {
+      // A dismissed native share sheet is not an application error.
     }
   }
 
@@ -55,62 +57,27 @@ export function PostShareRewardClaim({
         <span className="post-share-reward-icon"><Gift size={23} /></span>
         <div>
           <span className="eyebrow">SHARE & EARN</span>
-          <h2>بە هاوبەشکردنی ئەم پۆستە پاداشت وەربگرە</h2>
-          <strong className="post-share-reward-amount">
-            {rewardAmountIqd.toLocaleString("en-US")} دینار
-          </strong>
-          <small className="muted">ژمارەی ماوەی پاداشت: {remainingClaims.toLocaleString("en-US")}</small>
+          <h2>لینکی تایبەتی خۆت هاوبەش بکە</h2>
+          <strong className="post-share-reward-amount">{rewardAmountIqd.toLocaleString("en-US")} دینار بۆ هەر کڕینی تەواوبوو</strong>
+          <small className="muted">سنووری ژمارەی کڕین نییە. خەڵات تەنها دوای گەیاندنی داواکاری لە جزدانی خاوەنی پۆست دەدرێتەوە.</small>
         </div>
       </div>
-
-      {remainingClaims <= 0 && existingClaim?.status !== "pending" && existingClaim?.status !== "paid" ? (
-        <p className="post-share-reward-pending" role="status">هەموو پاداشتەکانی ئەم پۆستە داواکراون.</p>
-      ) : existingClaim?.status === "paid" ? (
-        <p className="form-success" role="status">پاداشتی ئەم پۆستەت پێشتر پەسەند کراوە و بۆ جزدانی تۆ گوازراوەتەوە.</p>
-      ) : existingClaim?.status === "pending" ? (
-        <p className="post-share-reward-pending" role="status">داواکاری پاداشتت نێردراوە و چاوەڕێی پشکنینی سوپەر ئەدمینە.</p>
+      {!url ? (
+        <button type="button" className="button" onClick={createLink} disabled={pending}>
+          <Link2 size={17} /> {pending ? "لینک دروست دەکرێت..." : "دروستکردنی لینکی تایبەتی من"}
+        </button>
       ) : (
-        <>
-          {existingClaim?.status === "rejected" && (
-            <p className="form-error" role="alert">
-              داواکاری پێشووت ڕەتکرایەوە: {existingClaim.review_note ?? "بەڵگەکە پەسەند نەکرا."} دەتوانیت بەڵگەی نوێ بنێریت.
-            </p>
-          )}
-          <p className="muted">
-            پۆستەکە لە تۆڕە کۆمەڵایەتییەکان هاوبەش بکە، پاشان لینکی پەڕەی بڵاوکراوەکە لێرە بنووسە.
-            سوپەر ئەدمین بەڵگەکە دەپشکنێت؛ پاداشت تەنها دوای پەسەندکردن دەچێتە جزدانی تۆ.
-          </p>
-          <button type="button" className="button button-secondary" onClick={sharePost}>
-            <Link2 size={17} /> هاوبەشکردنی لینکی پۆست
-          </button>
-          {shareMessage && <small className="muted" role="status">{shareMessage}</small>}
-          <form action={formAction} className="post-share-reward-form">
-            <input type="hidden" name="post_id" value={postId} />
-            <label htmlFor={"share-proof-" + postId}>لینکی بەڵگەی هاوبەشکردن *</label>
-            <input
-              id={"share-proof-" + postId}
-              name="proof_url"
-              type="url"
-              inputMode="url"
-              placeholder="https://..."
-              pattern="https://.*"
-              required
-              maxLength={2000}
-              dir="ltr"
-            />
-            <button className="button" type="submit" disabled={pending}>
-              <Send size={16} /> {pending ? "داواکاری دەنێردرێت..." : "ناردنی داواکاری پاداشت"}
-            </button>
-            {state.message && (
-              <p className={state.status === "success" ? "form-success" : "form-error"} role={state.status === "success" ? "status" : "alert"}>
-                {state.message}
-              </p>
-            )}
-          </form>
-        </>
+        <div className="post-share-reward-form">
+          <label htmlFor={"share-link-" + postId}>لینکی تایبەت</label>
+          <input id={"share-link-" + postId} type="url" readOnly value={url} dir="ltr" />
+          <div className="post-share-reward-actions">
+            <button type="button" className="button button-secondary" onClick={copyLink}><Copy size={16} /> کۆپی کردن</button>
+            <button type="button" className="button" onClick={shareLink}><Share2 size={16} /> هاوبەشکردن</button>
+          </div>
+        </div>
       )}
-      <small className="muted">پاداشت بۆ هەر کڕیارێک بۆ هەر پۆستێک تەنها یەک جار دەدرێت و لەبەر پشکنینی سوپەر ئەدمینەوە پەسەند دەکرێت.</small>
-      <Link href="/dashboard/share-rewards" className="text-link">دۆخی داواکارییەکانی پاداشتم ببینە</Link>
+      {message && <p className="muted" role="status">{message}</p>}
+      <Link href="/dashboard/share-rewards" className="text-link"><ExternalLink size={15} /> بینینی کڕین و خەڵاتەکانم</Link>
     </section>
   );
 }

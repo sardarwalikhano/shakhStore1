@@ -1,9 +1,22 @@
 import { redirect } from "next/navigation";
+import { Gift } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
-import { ShareRewardClaimsManager, type ShareRewardClaimView } from "@/components/share-reward-claims-manager";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getMerchantCategoryForRole } from "@/lib/post-rules";
 
 export const dynamic = "force-dynamic";
+
+type ReferralRow = {
+  id: string;
+  post_id: string;
+  order_store_id: string;
+  sharer_user_id: string;
+  store_id: string;
+  reward_amount_iqd: number;
+  status: "pending" | "pending_wallet" | "paid";
+  created_at: string;
+  paid_at: string | null;
+};
 
 export default async function ShareRewardsDashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -11,64 +24,94 @@ export default async function ShareRewardsDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const role = user.app_metadata?.role;
+  const role = typeof user.app_metadata?.role === "string" ? user.app_metadata.role : null;
   const isAdmin = role === "super_admin";
   const isCustomer = role === "customer";
+  const merchantCategory = getMerchantCategoryForRole(role);
+  const isMerchant = merchantCategory !== null;
+  const dashboardRole = isAdmin ? "super_admin" as const
+    : isCustomer ? "customer" as const
+    : isMerchant ? role as "restaurant" | "supermarket" | "produce_vendor" | "meat_seafood_vendor"
+    : null;
   const identity = {
     name: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email ?? "بەکارهێنەر",
     email: user.email ?? null,
-    role: isAdmin ? "super_admin" as const : isCustomer ? "customer" as const : null,
+    role: dashboardRole,
   };
 
-  if (!isAdmin && !isCustomer) {
+  if (!isAdmin && !isCustomer && !isMerchant) {
     return (
-      <DashboardFrame identity={identity} title="پاداشتی هاوبەشکردن" subtitle="ئەم بەشە بۆ کڕیاران و سوپەر ئەدمینە." activePath="/dashboard/share-rewards">
+      <DashboardFrame identity={identity} title="پاداشتی هاوبەشکردن" subtitle="ئەم بەشە بۆ کڕیاران، دوکانداران و سوپەر ئەدمینە." activePath="/dashboard/share-rewards">
         <div className="empty-state"><strong>دەستڕاگەیشتنت بەم بەشە نییە</strong></div>
       </DashboardFrame>
     );
   }
 
-  let claimsQuery = supabase.from("post_share_reward_claims")
-    .select("id,post_id,post_title_snapshot,post_slug_snapshot,customer_user_id,reward_amount_iqd,proof_url,status,created_at,review_note")
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (isCustomer) claimsQuery = claimsQuery.eq("customer_user_id", user.id);
-  const { data: rows, error } = await claimsQuery;
-
-  let customerNames = new Map<string, string>();
-  if (isAdmin && (rows ?? []).length > 0) {
-    const ids = [...new Set((rows ?? []).map((claim) => claim.customer_user_id))];
-    const { data: profiles } = await supabase.from("profiles")
-      .select("id,full_name")
-      .in("id", ids);
-    customerNames = new Map((profiles ?? []).map((profile) => [
-      profile.id,
-      profile.full_name?.trim() || "کڕیار",
-    ]));
+  let storeIds: string[] = [];
+  if (isMerchant) {
+    const { data: stores } = await supabase.from("stores")
+      .select("id").eq("owner_id", user.id).eq("merchant_category", merchantCategory)
+      .eq("is_platform_store", false);
+    storeIds = (stores ?? []).map((store) => store.id);
   }
 
-  const claims: ShareRewardClaimView[] = (rows ?? []).map((claim) => ({
-    ...claim,
-    status: claim.status as ShareRewardClaimView["status"],
-    customer_name: isAdmin ? customerNames.get(claim.customer_user_id) ?? "کڕیار" : "هەژماری من",
-  }));
+  let query = supabase.from("post_share_order_attributions")
+    .select("id,post_id,order_store_id,sharer_user_id,store_id,reward_amount_iqd,status,created_at,paid_at")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (isCustomer) query = query.eq("sharer_user_id", user.id);
+  else if (isMerchant) query = storeIds.length ? query.in("store_id", storeIds) : query.eq("store_id", "00000000-0000-0000-0000-000000000000");
+  const { data, error } = await query;
+  const rows = (data ?? []) as ReferralRow[];
+  const postIds = [...new Set(rows.map((row) => row.post_id))];
+  let posts: { id: string; title: string }[] = [];
+  if (postIds.length) {
+    const postsResult = await supabase.from("posts").select("id,title").in("id", postIds);
+    posts = postsResult.data ?? [];
+  }
+  const titles = new Map(posts.map((post) => [post.id, post.title]));
+  const totalPaid = rows.filter((row) => row.status === "paid").reduce((sum, row) => sum + row.reward_amount_iqd, 0);
+  const totalPending = rows.filter((row) => row.status !== "paid").reduce((sum, row) => sum + row.reward_amount_iqd, 0);
 
   return (
     <DashboardFrame
       identity={identity}
-      title={isAdmin ? "پشکنینی داواکاری پاداشت" : "پاداشتی هاوبەشکردنی من"}
+      title={isAdmin ? "چاودێری خەڵاتی شێر" : isMerchant ? "خەڵاتی کڕینەکانم" : "کڕین و خەڵاتەکانی من"}
       subtitle={isAdmin
-        ? "بەڵگەی هاوبەشکردن بپشکنە؛ تەنها دوای پشتڕاستکردنەوە پاداشت بۆ جزدانی کڕیار بنێرە."
-        : "داواکاری پاداشتەکانت و دۆخی پشکنین و گواستنەوەی پارە لێرە ببینە."}
+        ? "هەموو پاداشتەکانی بەستراو بە کڕینی تەواوبوو و دۆخی گواستنەوەی پارە."
+        : isMerchant
+          ? "هەر خەڵاتێک کە لە جزدانی فرۆشگاکەت کەم دەکرێتەوە، لێرە دەبینرێت."
+          : "هەر داواکارییەک کە لە لینکی تۆوە بکرێت و بگەیەنرێت، لێرە وەک خەڵات تۆمار دەکرێت."}
       activePath="/dashboard/share-rewards"
     >
       {error ? (
-        <div className="empty-state">
-          <strong>نەتوانرا داواکارییەکانی پاداشت بخوێندرێنەوە</strong>
-          <span className="muted">RLS و دەستڕاگەیشتنی Supabase پشکنە.</span>
-        </div>
+        <div className="empty-state"><strong>نەتوانرا مێژووی خەڵاتەکان بخوێندرێتەوە</strong><span className="muted">دەستڕاگەیشتنی داتابەیس پشکنە.</span></div>
       ) : (
-        <ShareRewardClaimsManager claims={claims} mode={isAdmin ? "admin" : "customer"} />
+        <>
+          <section className="dashboard-stats-grid">
+            <article className="dashboard-stat-card"><span>کڕینە پەیوەستەکان</span><strong>{rows.length.toLocaleString("en-US")}</strong></article>
+            <article className="dashboard-stat-card"><span>خەڵاتی دراو</span><strong>{totalPaid.toLocaleString("en-US")} دینار</strong></article>
+            <article className="dashboard-stat-card"><span>خەڵاتی چاوەڕوان</span><strong>{totalPending.toLocaleString("en-US")} دینار</strong></article>
+          </section>
+          <section className="dashboard-panel">
+            <div className="section-heading"><div><h2><Gift size={18} /> مێژووی کڕینەکان</h2><p>خەڵات تەنها دوای گەیاندنی داواکاری لە جزدانی خاوەنی پۆست کەم و بۆ جزدانی خاوەن لینک زیاد دەکرێت.</p></div></div>
+            {rows.length === 0 ? (
+              <div className="empty-state"><strong>هێشتا کڕینێکی خەڵاتدار تۆمار نەکراوە.</strong><span className="muted">{isMerchant ? "دوای کڕینی تەواوبوو، دۆخی پارەدان لێرە دەردەکەوێت." : "لینکی تایبەتی پۆستێکی خەڵاتدار دروست بکە و هاوبەشی بکە."}</span></div>
+            ) : (
+              <div className="table-wrap"><table className="data-table">
+                <thead><tr><th>پۆست</th><th>بڕی خەڵات</th><th>دۆخ</th><th>کات</th></tr></thead>
+                <tbody>{rows.map((row) => (
+                  <tr key={row.id}>
+                    <td>{titles.get(row.post_id) ?? "پۆستی ئەرشیفکراو"}</td>
+                    <td>{row.reward_amount_iqd.toLocaleString("en-US")} دینار</td>
+                    <td>{row.status === "paid" ? "دراوە" : row.status === "pending_wallet" ? "چاوەڕێی پڕکردنەوەی جزدان" : "چاوەڕێی گەیاندن"}</td>
+                    <td>{new Date(row.paid_at ?? row.created_at).toLocaleString("ckb-IQ")}</td>
+                  </tr>
+                ))}</tbody>
+              </table></div>
+            )}
+          </section>
+        </>
       )}
     </DashboardFrame>
   );

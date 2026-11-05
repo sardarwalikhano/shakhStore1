@@ -616,3 +616,17 @@ img { max-width: 100%; }
  .share-reward-review-actions{display:grid}
  .share-reward-claim-heading{flex-direction:column}
 }
+
+/* Inline product creation and completed-order reward attribution */
+.post-inline-product-editor{display:grid;gap:16px;padding:18px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface-secondary,#f7f8f6)}
+.post-inline-product-editor .post-share-reward-fields{margin-top:4px}
+.post-linked-product-preview{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;padding:10px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface)}
+.post-linked-product-preview>img{width:92px;height:78px;object-fit:cover;border-radius:9px;background:var(--color-surface-secondary)}
+.post-linked-product-preview>div{display:grid;gap:4px;min-width:0}
+.post-linked-product-preview bdi{font-weight:800;color:var(--color-primary-strong,#a64a16)}
+.post-product-image-upload{display:grid;gap:8px}
+.post-product-image-upload>input[type=file]{width:100%;min-height:42px;padding:8px;border:1px dashed var(--color-border);border-radius:10px;background:var(--color-surface)}
+.post-share-reward-actions{display:flex;gap:10px;flex-wrap:wrap}
+.post-share-reward-actions .button{display:inline-flex;align-items:center;gap:8px}
+.post-share-reward-card .text-link{display:inline-flex;align-items:center;gap:7px;width:fit-content}
+@media(max-width:640px){.post-inline-product-editor{padding:12px}.post-linked-product-preview{align-items:flex-start}.post-share-reward-actions{display:grid;grid-template-columns:1fr}.post-share-reward-actions .button{width:100%;justify-content:center}}

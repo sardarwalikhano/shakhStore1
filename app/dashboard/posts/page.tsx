@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { DashboardFrame } from "@/components/dashboard-frame";
-import { PostsManager, type OrderablePostProduct, type PostAuditRecord, type PostRecord, type PostShareRewardCampaign } from "@/components/posts-manager";
+import { PostsManager, type OrderablePostProduct, type PostAuditRecord, type PostRecord, type PostShareRewardCampaign, type ProductCategoryOption } from "@/components/posts-manager";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMerchantCategoryForRole } from "@/lib/post-rules";
 
@@ -34,15 +34,15 @@ export default async function DashboardPostsPage() {
     </DashboardFrame>;
   }
 
-  let store: { id: string; name: string; status: string } | null = null;
+  let store: { id: string; name: string; status: string; merchant_category: string | null; wallet_suspended_at: string | null } | null = null;
   let storeError: string | null = null;
   if (!platformManager && merchantCategory) {
     const { data, error } = await supabase.from("stores")
-      .select("id,name,status")
+      .select("id,name,status,merchant_category,wallet_suspended_at")
       .eq("owner_id", user.id)
       .eq("merchant_category", merchantCategory)
       .eq("is_platform_store", false)
-      .eq("status", "active")
+      .in("status", ["active","suspended"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -80,7 +80,6 @@ export default async function DashboardPostsPage() {
       campaigns = new Map((campaignResult.data ?? []).map((campaign) => [campaign.post_id, campaign as PostShareRewardCampaign]));
     }
   }
-  const postsWithRewards = posts.map((post) => ({ ...post, share_reward: campaigns.get(post.id) ?? null }));
   let eventsResult;
   if (platformManager) {
     eventsResult = await supabase.from("post_audit_events")
@@ -98,13 +97,12 @@ export default async function DashboardPostsPage() {
   let orderableProducts: OrderablePostProduct[] = [];
   let productsError: string | null = null;
   let productsQuery = supabase.from("products")
-    .select("id,name,store_id,price_iqd,unit")
-    .eq("status", "published")
-    .eq("is_available", true)
+    .select("id,name,store_id,price_iqd,unit,image_url,status,is_available")
     .order("name", { ascending: true })
     .limit(200);
   if (!platformManager && store) productsQuery = productsQuery.eq("store_id", store.id);
   const productsResult = await productsQuery;
+  let linkedProducts = new Map<string, { id: string; name: string; price_iqd: number; unit: string; image_url: string | null; status: string }>();
   if (productsResult.error) {
     productsError = productsResult.error.message;
   } else {
@@ -117,24 +115,36 @@ export default async function DashboardPostsPage() {
       const storeMap = new Map((linkedStores.data ?? [])
         .filter((linkedStore) => linkedStore.status === "active" && !linkedStore.is_platform_store)
         .map((linkedStore) => [linkedStore.id, linkedStore.name]));
-      orderableProducts = (productsResult.data ?? []).flatMap((product) => {
+      const allProducts = (productsResult.data ?? []).flatMap((product) => {
         const storeName = storeMap.get(product.store_id);
-        return storeName ? [{ id: product.id, name: product.name, store_name: storeName, price_iqd: product.price_iqd, unit: product.unit }] : [];
+        return storeName ? [{
+          id: product.id, name: product.name, store_name: storeName,
+          price_iqd: product.price_iqd, unit: product.unit,
+          image_url: product.image_url, status: product.status,
+          is_available: product.is_available,
+        }] : [];
       });
+      linkedProducts = new Map(allProducts.map((product) => [product.id, product]));
+      orderableProducts = allProducts
+        .filter((product) => product.status === "published" && product.is_available)
+        .map(({ is_available: _available, ...product }) => product);
     }
   }
 
-  let merchantWalletBalanceIqd: number | null = null;
-  if (!platformManager && store) {
-    const { data: wallet } = await supabase.from("wallet_balances")
-      .select("balance_iqd")
-      .eq("account_type", "merchant")
-      .eq("store_id", store.id)
-      .maybeSingle();
-    merchantWalletBalanceIqd = wallet?.balance_iqd ?? null;
-  }
+  const productCategoriesResult = await supabase.from("catalog_categories")
+    .select("id,name_ckb")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  const productCategories = (productCategoriesResult.data ?? []) as ProductCategoryOption[];
+  const postsWithRewards = posts.map((post) => ({
+    ...post,
+    share_reward: campaigns.get(post.id) ?? null,
+    linked_product: post.product_id ? linkedProducts.get(post.product_id) ?? null : null,
+  }));
 
-  const pageError = postsResult.error || eventsResult.error || productsError || campaignsError;
+
+
+  const pageError = postsResult.error || eventsResult.error || productsError || campaignsError || productCategoriesResult.error;
   const events = (eventsResult.data ?? []) as PostAuditRecord[];
 
   return (
@@ -146,16 +156,18 @@ export default async function DashboardPostsPage() {
         : `پۆستی تایبەت بە فرۆشگای ${store?.name ?? ""}; بەشداریکردن لە پۆستەکانی فرۆشگای تر ڕێگەپێدراو نییە.`}
       activePath="/dashboard/posts"
     >
+      {store?.status === "suspended" && store.wallet_suspended_at && <div className="dashboard-panel"><strong className="form-error">دوکانەکەت بەهۆی بەتاڵبوونی جزدانی پێشەکی ناچالاک کراوە.</strong><p>جزدان پڕ بکەرەوە و پەیوەندی بە سوپەر ئەدمینەوە بکە بۆ پشکنین و چالاککردنەوەی دوکان. تا ئەو کاتە، پۆست و بەرهەمی نوێ بڵاوناکرێنەوە.</p></div>}
       {pageError
         ? <div className="empty-state"><strong>نەتوانرا پۆستەکان بخوێندرێنەوە</strong><span className="muted">RLS و دەستڕاگەیشتنی Database پشکنە.</span></div>
         : <PostsManager
             posts={postsWithRewards}
             events={events}
             orderableProducts={orderableProducts}
-            merchantWalletBalanceIqd={merchantWalletBalanceIqd}
+            productCategories={productCategories}
             mode={platformManager ? "platform" : "merchant"}
             storeId={store?.id ?? null}
             storeName={store?.name ?? null}
+            storeCategory={store?.merchant_category ?? null}
           />}
     </DashboardFrame>
   );

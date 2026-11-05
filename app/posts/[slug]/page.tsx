@@ -7,11 +7,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUnitLabelCkb } from "@/lib/marketplace-rules";
 import { PostShareRewardClaim } from "@/components/post-share-reward-claim";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ ref?: string }> };
 export const dynamic = "force-dynamic";
 
-export default async function PublicPostDetailPage({ params }: Props) {
-  const { slug } = await params;
+export default async function PublicPostDetailPage({ params, searchParams }: Props) {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const shareCode = typeof query.ref === "string" && /^[a-f0-9]{40}$/i.test(query.ref) ? query.ref : null;
   const supabase = await createSupabaseServerClient();
   if (!supabase) notFound();
 
@@ -36,19 +37,10 @@ export default async function PublicPostDetailPage({ params }: Props) {
     publisherOwnerId = store?.owner_id ?? null;
   }
 
-  const [{ data: shareReward }, { data: existingShareClaim }] = await Promise.all([
-    supabase.from("post_share_rewards_public")
-      .select("reward_amount_iqd,max_claims,remaining_claims")
-      .eq("post_id", post.id)
-      .maybeSingle(),
-    user?.app_metadata?.role === "customer"
-      ? supabase.from("post_share_reward_claims")
-          .select("status,review_note")
-          .eq("post_id", post.id)
-          .eq("customer_user_id", user.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-  ]);
+  const { data: shareReward } = await supabase.from("post_share_rewards_public")
+    .select("reward_amount_iqd")
+    .eq("post_id", post.id)
+    .maybeSingle();
 
   let orderProduct: {
     id: string; name: string; description: string | null; price_iqd: number;
@@ -89,7 +81,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
           <p className="post-article-excerpt">{post.excerpt}</p>
           <div className="post-article-body">{post.body}</div>
 
-          {shareReward && shareReward.reward_amount_iqd !== null && shareReward.remaining_claims !== null && (
+          {shareReward && shareReward.reward_amount_iqd !== null && (
             <section className="post-share-reward-card">
               {isOwnPost ? (
                 <>
@@ -100,9 +92,8 @@ export default async function PublicPostDetailPage({ params }: Props) {
               ) : isCustomer ? (
                 <PostShareRewardClaim
                   postId={post.id}
+                  postSlug={post.slug}
                   rewardAmountIqd={shareReward.reward_amount_iqd}
-                  remainingClaims={shareReward.remaining_claims ?? 0}
-                  existingClaim={existingShareClaim ?? null}
                 />
               ) : user ? (
                 <div>
@@ -160,6 +151,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
                     minOrderQuantity: orderProduct.min_order_quantity,
                     maxOrderQuantity: orderProduct.max_order_quantity,
                     quantityStep: orderProduct.quantity_step,
+                    shareCode,
                   }} />
                 ) : user ? (
                   <p className="muted">بۆ داواکاری، دەبێت بە هەژماری کڕیار چووبیتە ژوورەوە.</p>
