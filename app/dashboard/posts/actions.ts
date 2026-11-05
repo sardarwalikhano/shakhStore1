@@ -158,7 +158,7 @@ export async function savePostAction(
     if (createsProduct && (existing.status !== "draft" || !storeId || isPlatformManager)) {
       return { status: "error", message: "بەرهەمی نوێ تەنها لەگەڵ پۆستی ڕەشنووسی فرۆشگای خۆت دروست دەکرێت." };
     }
-    if (productId && !(await isOrderableProductForPost(supabase, productId, storeId, user.id, role))) {
+    if (productId && productId !== existing.product_id && !(await isOrderableProductForPost(supabase, productId, storeId, user.id, role))) {
       return { status: "error", message: "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، لە هەمان فرۆشگا هەڵیبژێرە." };
     }
     const { error } = await supabase.from("posts").update({
@@ -196,7 +196,7 @@ export async function savePostAction(
       if (rewardError) return { status: "error", message: databaseMessage(rewardError.message) };
     }
     if (createsProduct) {
-      const productResult = await createDraftProductForPost(supabase, role, storeId, insertedPost.id, formData);
+      const productResult = await createDraftProductForPost(supabase, role, storeId!, insertedPost.id, formData);
       if (!productResult.ok) return { status: "error", message: productResult.message };
     }
   }
