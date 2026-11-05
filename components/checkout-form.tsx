@@ -37,7 +37,7 @@ export function CheckoutForm({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState<{ orderNumber: string; total: number } | null>(null);
+  const [success, setSuccess] = useState<{ orderNumber: string; total: number | null } | null>(null);
   const idempotencyKey = useRef<string | null>(null);
   const selectedAddress = addresses.find(x=>x.id===addressId);
   const serviceable = selectedAddress?.serviceable === true;
@@ -66,18 +66,20 @@ export function CheckoutForm({
         : {};
       const orderId = typeof result.order_id === "string" ? result.order_id : "";
       if (!orderId) throw new Error("ORDER_ID_MISSING");
-      // Read the persisted total after order_stores triggers have applied store-level delivery snapshots.
-      const { data: savedOrder, error: savedOrderError } = await supabase
+      // The RPC succeeded, so the order exists. A follow-up read failure must not be shown as checkout failure.
+      const { data: savedOrder } = await supabase
         .from("orders")
         .select("order_number,total_iqd")
         .eq("id", orderId)
         .single();
-      if (savedOrderError || !savedOrder) {
-        throw new Error("ORDER_CREATED_TOTAL_UNAVAILABLE");
-      }
-      const orderNumber = typeof savedOrder.order_number === "string" ? savedOrder.order_number : "—";
-      const total = Number(savedOrder.total_iqd);
-      if (!Number.isFinite(total)) throw new Error("ORDER_CREATED_TOTAL_UNAVAILABLE");
+      const orderNumber = typeof savedOrder?.order_number === "string"
+        ? savedOrder.order_number
+        : (typeof result.order_number === "string" ? result.order_number : "—");
+      const persistedTotal = Number(savedOrder?.total_iqd);
+      const rpcTotal = Number(result.total_iqd);
+      const total = Number.isFinite(persistedTotal)
+        ? persistedTotal
+        : (Number.isFinite(rpcTotal) ? rpcTotal : null);
       setSuccess({orderNumber,total});
       clearCart();
       idempotencyKey.current = null;
@@ -121,7 +123,7 @@ export function CheckoutForm({
         <CheckCircle2 size={48} color="#198754" />
         <h2>داواکارییەکەت تۆمار کرا</h2>
         <p>ژمارەی داواکاری: <bdi dir="ltr">{success.orderNumber}</bdi></p>
-        <strong>{money(success.total)}</strong>
+        {success.total !== null ? <strong>{money(success.total)}</strong> : <p className="muted">داواکاری تۆمار کرا؛ نەتوانرا کۆی پارە لە ئێستادا پیشان بدرێت. تکایە لە وردەکاری داواکارییەکەدا نرخەکە ببینە.</p>}
         <p className="muted">پارەدان بە کاش لە کاتی گەیاندنەوە دەکرێت. داواکارییەکەت لە داشبۆرد دەتوانیت ببینیت.</p>
         <Link href="/dashboard/orders" className="button">بینینی داواکاریەکان <ArrowLeft size={17} /></Link>
       </section>
