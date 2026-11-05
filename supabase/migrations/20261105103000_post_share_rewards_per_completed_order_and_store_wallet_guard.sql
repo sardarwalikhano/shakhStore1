@@ -75,9 +75,17 @@ create policy post_share_links_select_owner_or_admin
   using (sharer_user_id = (select auth.uid()) or public.current_app_role() in ('admin','super_admin'));
 
 drop policy if exists post_share_order_attributions_select_sharer_or_admin on public.post_share_order_attributions;
-create policy post_share_order_attributions_select_sharer_or_admin
+drop policy if exists post_share_order_attributions_select_participants on public.post_share_order_attributions;
+create policy post_share_order_attributions_select_participants
   on public.post_share_order_attributions for select to authenticated
-  using (sharer_user_id = (select auth.uid()) or public.current_app_role() in ('admin','super_admin'));
+  using (
+    sharer_user_id = (select auth.uid())
+    or public.current_app_role() in ('admin','super_admin')
+    or exists (
+      select 1 from public.stores s
+      where s.id = store_id and s.owner_id = (select auth.uid())
+    )
+  );
 
 revoke insert, update, delete on public.post_share_links from anon, authenticated;
 revoke insert, update, delete on public.post_share_order_attributions from anon, authenticated;
@@ -782,7 +790,6 @@ begin
       and a.status = 'pending_wallet'
       and os.status = 'delivered'
     order by a.created_at
-    for update of a skip locked
   loop
     perform private.settle_post_share_order_reward_v1(v_row.order_store_id);
   end loop;
@@ -872,5 +879,21 @@ begin
 end;
 $block$;
 
+-- Apply the empty-wallet rule to merchant stores that are already active at rollout.
+do $block$
+declare
+  v_store record;
+begin
+  for v_store in
+    select s.id from public.stores s
+    where s.is_platform_store = false and s.status = 'active'
+    order by s.id
+  loop
+    perform private.ensure_store_suspended_for_empty_wallet_v1(v_store.id, null);
+  end loop;
+end;
+$block$;
+
 -- Public Postgres functions called through PostgREST.
+revoke all on function public.create_order_v1(uuid,jsonb,text,text,text) from public, anon;
 grant execute on function public.create_order_v1(uuid,jsonb,text,text,text) to authenticated;
