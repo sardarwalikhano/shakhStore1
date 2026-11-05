@@ -1332,10 +1332,6 @@ export type Database = {
         Args: { p_assignment_id: string }
         Returns: Json
       }
-      captain_confirm_cod_collection_v1: {
-        Args: { p_assignment_id: string; p_cash_received_iqd: number; p_receipt_reference?: string | null }
-        Returns: Json
-      }
       current_app_role: { Args: never; Returns: string }
       merchant_update_order_store_status_v1: {
         Args: { p_order_store_id: string; p_new_status: string; p_note?: string | null }
