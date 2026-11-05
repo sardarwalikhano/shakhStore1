@@ -80,7 +80,6 @@ export default async function DashboardPostsPage() {
       campaigns = new Map((campaignResult.data ?? []).map((campaign) => [campaign.post_id, campaign as PostShareRewardCampaign]));
     }
   }
-  const postsWithRewards = posts.map((post) => ({ ...post, share_reward: campaigns.get(post.id) ?? null }));
   let eventsResult;
   if (platformManager) {
     eventsResult = await supabase.from("post_audit_events")
@@ -143,15 +142,7 @@ export default async function DashboardPostsPage() {
     linked_product: post.product_id ? linkedProducts.get(post.product_id) ?? null : null,
   }));
 
-  let merchantWalletBalanceIqd: number | null = null;
-  if (!platformManager && store) {
-    const { data: wallet } = await supabase.from("wallet_balances")
-      .select("balance_iqd")
-      .eq("account_type", "merchant")
-      .eq("store_id", store.id)
-      .maybeSingle();
-    merchantWalletBalanceIqd = wallet?.balance_iqd ?? null;
-  }
+
 
   const pageError = postsResult.error || eventsResult.error || productsError || campaignsError || productCategoriesResult.error;
   const events = (eventsResult.data ?? []) as PostAuditRecord[];
@@ -171,7 +162,7 @@ export default async function DashboardPostsPage() {
             posts={postsWithRewards}
             events={events}
             orderableProducts={orderableProducts}
-                    productCategories={productCategories}
+            productCategories={productCategories}
             mode={platformManager ? "platform" : "merchant"}
             storeId={store?.id ?? null}
             storeName={store?.name ?? null}
