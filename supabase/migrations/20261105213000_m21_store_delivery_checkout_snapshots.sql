@@ -39,7 +39,7 @@ begin
      total_iqd=o.items_subtotal_iqd-coalesce(o.discount_iqd,0)+v_fee_total+coalesce(o.tax_iqd,0),
      updated_at=now()
  where o.id=v_order_id;
- return coalesce(new,old);
+ return null;
 end;
 $$;
 
