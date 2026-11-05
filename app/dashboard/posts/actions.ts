@@ -72,7 +72,7 @@ async function isOrderableProductForPost(
 function databaseMessage(message: string): string {
   if (message.includes("posts_slug_key") || message.includes("duplicate key")) return "ئەم Slug ـە پێشتر بەکارهاتووە؛ Slug ـێکی تر هەڵبژێرە.";
   if (message.includes("POST_PRODUCT_NOT_ORDERABLE") || message.includes("POST_PRODUCT_STORE_MISMATCH")) return "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، لە هەمان فرۆشگا بێت.";
-  if (message.includes("INVALID_SHARE_REWARD_CONFIGURATION") || message.includes("INVALID_SHARE_REWARD_LIMIT")) return "بڕی پاداشت دەبێت لە ١٠٠ تا ١٠،٠٠٠،٠٠٠ دینار و ژمارەی سوودمەندان لە ١ تا ١٠٠٠ بێت.";
+  if (message.includes("INVALID_SHARE_REWARD_CONFIGURATION") || message.includes("INVALID_SHARE_REWARD_LIMIT")) return "بڕی خەڵات دەبێت لە ١ تا ١٠،٠٠٠،٠٠٠ دینار بێت.";
   if (message.includes("FUNDED_SHARE_REWARD_CANNOT_BE_CHANGED") || message.includes("FUNDED_SHARE_REWARD_CANNOT_BE_REMOVED")) return "بودجەی پاداشت پارێزراوە؛ دوای بڵاوکردنەوە ناتوانرێت بگۆڕدرێت یان بسڕدرێتەوە.";
   if (message.includes("SHARE_REWARD_MUST_BE_SET_BEFORE_PUBLISHING")) return "پاداشت پێویستە پێش بڵاوکردنەوەی پۆست ڕێکبخرێت.";
   if (message.includes("INVALID_SHARE_REWARD_CONFIGURATION")) return "بڕی پاداشت دەبێت لە ١٠٠ تا ١٠،٠٠٠،٠٠٠ دینار و ژمارەی پاداشتەکان لە ١ تا ١٠٠٠ بێت.";
@@ -99,6 +99,7 @@ async function canManageExistingPost(
   return store ? post : null;
 }
 
+
 export async function savePostAction(
   _previousState: PostActionState,
   formData: FormData,
@@ -111,20 +112,20 @@ export async function savePostAction(
   const rawCover = value(formData, "cover_image_url");
   const postId = value(formData, "post_id");
   const productId = value(formData, "product_id");
+  const newProductName = value(formData, "new_product_name");
+  const newProductPrice = value(formData, "new_product_price_iqd");
+  const newProductCategory = value(formData, "new_product_category_id");
+  const newProductImage = value(formData, "new_product_image_url");
   const shareRewardFieldPresent = formData.has("share_reward_amount_iqd");
   const shareRewardAmountRaw = value(formData, "share_reward_amount_iqd");
-  const shareRewardMaxRaw = value(formData, "share_reward_max_claims");
   const shareRewardAmountIqd = shareRewardFieldPresent && shareRewardAmountRaw ? Number(shareRewardAmountRaw) : 0;
-  const shareRewardMaxClaims = shareRewardFieldPresent && shareRewardMaxRaw ? Number(shareRewardMaxRaw) : 0;
+
+  const createsProduct = Boolean(newProductName || newProductPrice || newProductCategory || newProductImage);
   if (productId && !uuidPattern.test(productId)) return { status: "error", message: "بەرهەمی هەڵبژێردراو دروست نییە." };
-  if (shareRewardFieldPresent && (
-    !Number.isSafeInteger(shareRewardAmountIqd) || shareRewardAmountIqd < 0
-    || (shareRewardAmountIqd > 0 && (
-      shareRewardAmountIqd < 100 || shareRewardAmountIqd > 10000000
-      || !Number.isInteger(shareRewardMaxClaims) || shareRewardMaxClaims < 1 || shareRewardMaxClaims > 1000
-      || shareRewardAmountIqd * shareRewardMaxClaims > 500000000
-    ))
-  )) return { status: "error", message: "بڕی پاداشت و ژمارەی سوودمەندان پێویستە لە سنووری دیاریکراودا بن." };
+  if (productId && createsProduct) return { status: "error", message: "یاخود بەرهەمێکی بڵاوکراوە هەڵبژێرە، یان بەرهەمی نوێ زیاد بکە؛ هەردووکیان پێکەوە مەکە." };
+  if (shareRewardFieldPresent && (!Number.isSafeInteger(shareRewardAmountIqd) || shareRewardAmountIqd < 0 || shareRewardAmountIqd > 10000000)) {
+    return { status: "error", message: "بڕی خەڵات دەبێت ژمارەیەکی تەواو لە نێوان ٠ تا ١٠،٠٠٠،٠٠٠ دینار بێت." };
+  }
 
   if (title.length < 3 || title.length > 180) return { status: "error", message: "ناونیشان دەبێت لە نێوان ٣ تا ١٨٠ پیت بێت." };
   if (!isValidPostSlug(slug)) return { status: "error", message: "Slug دەبێت بە پیتی بچووک و ژمارە و هێڵی ناوەڕاست بێت." };
@@ -147,37 +148,35 @@ export async function savePostAction(
   if (!auth.supabase || !auth.user || !auth.role) return { status: "error", message: auth.message };
   const { supabase, user, role } = auth;
   const isPlatformManager = role === "admin" || role === "super_admin";
+  let storeId: string | null = null;
 
   if (postId) {
     if (!uuidPattern.test(postId)) return { status: "error", message: "ناسنامەی پۆست دروست نییە." };
     const existing = await canManageExistingPost(supabase, user.id, role, postId);
     if (!existing) return { status: "error", message: "تەنها دەتوانیت پۆستی خۆت یان پۆستی پلاتفۆرم دەستکاری بکەیت." };
-    if (productId && !(await isOrderableProductForPost(supabase, productId, existing.store_id, user.id, role))) {
-      return { status: "error", message: "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، بەرهەمەکە لە هەمان فرۆشگا هەڵبژێرە." };
+    storeId = existing.store_id;
+    if (createsProduct && (existing.status !== "draft" || !storeId || isPlatformManager)) {
+      return { status: "error", message: "بەرهەمی نوێ تەنها لەگەڵ پۆستی ڕەشنووسی فرۆشگای خۆت دروست دەکرێت." };
+    }
+    if (productId && !(await isOrderableProductForPost(supabase, productId, storeId, user.id, role))) {
+      return { status: "error", message: "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، لە هەمان فرۆشگا هەڵیبژێرە." };
     }
     const { error } = await supabase.from("posts").update({
       title, slug, category, excerpt, body, cover_image_url: coverImageUrl,
       product_id: productId || null,
     }).eq("id", postId);
     if (error) return { status: "error", message: databaseMessage(error.message) };
-
-    if (shareRewardFieldPresent && getMerchantCategoryForRole(role) && existing.status === "draft") {
-      const { error: rewardError } = await supabase.rpc("configure_post_share_reward_v1", {
-        p_post_id: postId,
-        p_reward_amount_iqd: shareRewardAmountIqd,
-        p_max_claims: shareRewardAmountIqd > 0 ? shareRewardMaxClaims : 0,
-      });
-      if (rewardError) return { status: "error", message: databaseMessage(rewardError.message) };
-    }
   } else {
-    let storeId: string | null = null;
     if (!isPlatformManager) {
       storeId = value(formData, "store_id");
       const store = await findOwnedActiveStore(supabase, user.id, role, storeId);
       if (!store) return { status: "error", message: "فرۆشگای چالاک و هاوتای ڕۆڵەکەت نەدۆزرایەوە." };
     }
+    if (createsProduct && (!storeId || isPlatformManager)) {
+      return { status: "error", message: "بەرهەمی فرۆشگا تەنها لە پۆستی دوکانداری چالاکدا زیاد دەکرێت." };
+    }
     if (productId && !(await isOrderableProductForPost(supabase, productId, storeId, user.id, role))) {
-      return { status: "error", message: "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، بەرهەمەکە لە هەمان فرۆشگا هەڵبژێرە." };
+      return { status: "error", message: "بەرهەمی پەیوەست دەبێت بڵاوکراوە و بەردەست بێت؛ بۆ پۆستی فرۆشگا، لە هەمان فرۆشگا هەڵیبژێرە." };
     }
     const { data: insertedPost, error } = await supabase.from("posts").insert({
       author_user_id: user.id,
@@ -188,22 +187,100 @@ export async function savePostAction(
       published_at: null,
     }).select("id").single();
     if (error || !insertedPost) return { status: "error", message: databaseMessage(error?.message ?? "post_insert_failed") };
-
     if (shareRewardFieldPresent && getMerchantCategoryForRole(role)) {
       const { error: rewardError } = await supabase.rpc("configure_post_share_reward_v1", {
         p_post_id: insertedPost.id,
         p_reward_amount_iqd: shareRewardAmountIqd,
-        p_max_claims: shareRewardAmountIqd > 0 ? shareRewardMaxClaims : 0,
+        p_max_claims: null,
       });
       if (rewardError) return { status: "error", message: databaseMessage(rewardError.message) };
     }
+    if (createsProduct) {
+      const productResult = await createDraftProductForPost(supabase, role, storeId, insertedPost.id, formData);
+      if (!productResult.ok) return { status: "error", message: productResult.message };
+    }
+  }
+
+  if (postId && shareRewardFieldPresent && getMerchantCategoryForRole(role)) {
+    const { error: rewardError } = await supabase.rpc("configure_post_share_reward_v1", {
+      p_post_id: postId,
+      p_reward_amount_iqd: shareRewardAmountIqd,
+      p_max_claims: null,
+    });
+    if (rewardError) return { status: "error", message: databaseMessage(rewardError.message) };
+  }
+
+  if (postId && createsProduct) {
+    const productResult = await createDraftProductForPost(supabase, role, storeId!, postId, formData);
+    if (!productResult.ok) return { status: "error", message: productResult.message };
   }
 
   revalidatePath("/dashboard/posts");
+  revalidatePath("/dashboard/products");
+  revalidatePath("/dashboard/product-moderation");
   revalidatePath("/dashboard/share-rewards");
   revalidatePath("/posts");
-  revalidatePath(`/posts/${slug}`);
-  return { status: "success", message: postId ? "پۆستەکە نوێ کرایەوە." : "پۆستەکە وەک ڕەشنووس پاشەکەوت کرا." };
+  revalidatePath("/posts/" + slug);
+  return {
+    status: "success",
+    message: createsProduct
+      ? "پۆستەکە پاشەکەوت کرا و بەرهەمەکەش وەک ڕەشنووس نێردرا بۆ پشکنینی بەڕێوەبەر؛ دوای پەسەندکردنی بەرهەم دەتوانیت پۆستەکە بڵاوبکەیتەوە."
+      : postId ? "پۆستەکە نوێ کرایەوە." : "پۆستەکە وەک ڕەشنووس پاشەکەوت کرا.",
+  };
+}
+
+async function createDraftProductForPost(
+  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  role: string,
+  storeId: string,
+  postId: string,
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const name = value(formData, "new_product_name");
+  const categoryId = value(formData, "new_product_category_id");
+  const priceIqd = Number(value(formData, "new_product_price_iqd"));
+  const unit = value(formData, "new_product_unit");
+  const stockRaw = value(formData, "new_product_stock_quantity");
+  const stockQuantity = stockRaw ? Number(stockRaw) : null;
+  const imageUrlRaw = value(formData, "new_product_image_url");
+  const allowedUnits: Record<string, string[]> = {
+    meat_seafood: ["kg","g","piece","pack"],
+    fruits_vegetables: ["kg","g","piece","pack"],
+    supermarket: ["piece","kg","g","liter","ml","pack","bottle","box","dozen"],
+    restaurant: ["piece","kg","g","liter","ml","pack"],
+  };
+  const category = getMerchantCategoryForRole(role);
+  if (!category || !storeId || !uuidPattern.test(categoryId)) return { ok: false, message: "پۆلی بەرهەم یان فرۆشگای پەیوەست دروست نییە." };
+  if (name.length < 2 || name.length > 160) return { ok: false, message: "ناوی بەرهەم دەبێت لە نێوان ٢ تا ١٦٠ پیت بێت." };
+  if (!Number.isSafeInteger(priceIqd) || priceIqd < 1) return { ok: false, message: "نرخی بەرهەم بە دیناری تەواو و زیاتر لە سفر بنووسە." };
+  if (!(allowedUnits[category] ?? []).includes(unit)) return { ok: false, message: "یەکەی بەرهەم بۆ ئەم جۆرە فرۆشگایە ڕێگەپێدراو نییە." };
+  if (stockQuantity !== null && (!Number.isFinite(stockQuantity) || stockQuantity < 0 || (unit !== "kg" && unit !== "liter" && !Number.isSafeInteger(stockQuantity)))) {
+    return { ok: false, message: "بڕی کۆگا بۆ ئەم یەکەیە نادروستە." };
+  }
+  let imageUrl: string;
+  try {
+    const parsed = new URL(imageUrlRaw);
+    if (parsed.protocol !== "https:") throw new Error("https required");
+    imageUrl = parsed.toString();
+  } catch {
+    return { ok: false, message: "تکایە وێنەی بەرهەم بار بکە؛ لینکی وێنە دەبێت HTTPS بێت." };
+  }
+  const fractional = unit === "kg" || unit === "liter";
+  const { data: product, error: insertError } = await supabase.from("products").insert({
+    store_id: storeId,
+    category_id: categoryId,
+    name,
+    price_iqd: priceIqd,
+    image_url: imageUrl,
+    unit,
+    stock_quantity: stockQuantity,
+    min_order_quantity: fractional ? 0.1 : 1,
+    quantity_step: fractional ? 0.1 : 1,
+  }).select("id").single();
+  if (insertError || !product) return { ok: false, message: "زیادکردنی بەرهەم سەرکەوتوو نەبوو؛ پۆلی بەرهەم، وێنە و دەسەڵاتەکان پشکنە." };
+  const { error: linkError } = await supabase.from("posts").update({ product_id: product.id }).eq("id", postId);
+  if (linkError) return { ok: false, message: "بەرهەمەکە وەک ڕەشنووس زیاد کرا، بەڵام بە پۆستەکەوە نەبەسترا. پۆستەکە هێشتا ڕەشنووسە؛ تکایە دووبارە هەوڵ بدە." };
+  return { ok: true };
 }
 
 export async function updatePostStatusAction(
@@ -228,12 +305,6 @@ export async function updatePostStatusAction(
     p_new_status: newStatus,
   });
   if (error) {
-    if (error.message.includes("insufficient_wallet_balance")) {
-      return { status: "error", message: "باڵانسی جزدانی پێشەکی بەشی کۆی بودجەی پاداشت ناکات؛ تکایە جزدان پڕ بکەرەوە." };
-    }
-    if (error.message.includes("SHARE_REWARD_PENDING_CLAIMS_REVIEW_FIRST")) {
-      return { status: "error", message: "پێش ئەرشیفکردن، داواکارییە چاوەڕوانەکانی پاداشت دەبێت پشکنین بکرێن." };
-    }
     if (error.message.includes("SHARE_REWARD_CAMPAIGN_CLOSED")) {
       return { status: "error", message: "بودجەی پاداشتی پۆستێکی ئەرشیفکراو داخراوە؛ بۆ پاداشتی نوێ پۆستێکی نوێ دروست بکە." };
     }
