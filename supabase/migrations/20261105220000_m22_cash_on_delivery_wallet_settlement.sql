@@ -1,14 +1,16 @@
 -- M22: account for cash-on-delivery collection without debiting platform funds.
 -- The captain collects the full fee in cash. The journal records the cash
 -- clearing debit and credits the captain's 80% earning and platform's 20% share.
+-- M08 names the original owner constraint wallet_accounts_owner_scope.
 alter table public.wallet_accounts
   drop constraint if exists wallet_accounts_account_type_check,
+  drop constraint if exists wallet_accounts_owner_scope,
   drop constraint if exists wallet_accounts_owner_scope_check;
 
 alter table public.wallet_accounts
   add constraint wallet_accounts_account_type_check
     check (account_type in ('customer','merchant','captain','platform','cash_clearing')),
-  add constraint wallet_accounts_owner_scope_check
+  add constraint wallet_accounts_owner_scope
     check (
       (account_type in ('customer','captain') and user_id is not null and store_id is null)
       or (account_type='merchant' and user_id is not null and store_id is not null)
