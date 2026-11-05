@@ -69,6 +69,7 @@ export function DashboardFrame({
     { href: "/dashboard/addresses", label: "ناونیشانەکان", icon: MapPinned, visible: role === "customer" },
     { href: "/merchant/apply", label: "داواکاری دوکانداری", icon: Store, visible: role === "customer" },
     { href: "/dashboard/delivery-zones", label: "ناوچەی گەیاندن", icon: MapPinned, visible: role === "admin" || role === "super_admin" },
+    { href: "/dashboard/captains", label: "کاپتنەکان", icon: UserRound, visible: role === "super_admin" },
     { href: "/dashboard/merchant-applications", label: "داواکاری فرۆشگا", icon: ShieldCheck, visible: role === "admin" || role === "super_admin" },
     { href: "/dashboard/product-moderation", label: "پشکنینی بەرهەم", icon: Boxes, visible: role === "admin" || role === "super_admin" },
     { href: "/dashboard/posts", label: "پۆست و ئاگاداری", icon: Newspaper, visible: role === "admin" || role === "super_admin" || merchantRoles.includes(role) },

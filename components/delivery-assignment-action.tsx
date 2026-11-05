@@ -8,6 +8,10 @@ export type CaptainOption = {
   user_id: string;
   full_name: string;
   email: string | null;
+  scope_type: "global" | "zones";
+  is_active: boolean;
+  zone_ids: string[];
+  email_confirmed: boolean;
 };
 
 type Props = {
@@ -35,7 +39,7 @@ export function DeliveryAssignmentAction({
   if (captains.length === 0) {
     return (
       <p className="muted delivery-assignment-hint">
-        هیچ کاپتنێکی چالاک و پشتڕاستکراو نییە. سەرەتا هەژمارێکی کاپتن دروست بکە و ڕۆڵەکەی لەلایەن سوپەرئەدمینەوە دیاری بکە.
+        هیچ کاپتنێکی چالاک و پشتڕاستکراو بۆ ئەم زۆنە نییە. مەودای کاپتنەکان لە بەشی «کاپتنەکان» ڕێکبخە.
       </p>
     );
   }
@@ -58,6 +62,10 @@ export function DeliveryAssignmentAction({
       setError(
         message.includes("TARGET_USER_IS_NOT_CAPTAIN")
           ? "ئەم هەژمارە ڕۆڵی کاپتنی نییە."
+          : message.includes("CAPTAIN_OUTSIDE_ASSIGNED_ZONES")
+            ? "ئەم کاپتنە مۆڵەتی کارکردنی لەم زۆنەدا نییە."
+            : message.includes("CAPTAIN_SCOPE_INACTIVE") || message.includes("CAPTAIN_SCOPE_NOT_CONFIGURED")
+              ? "مەودای کاری کاپتن چالاک نییە؛ ڕێکخستنی کاپتن پشکنە."
           : message.includes("ORDER_NOT_READY_FOR_PICKUP")
             ? "فرۆشگا هێشتا داواکارییەکەی ئامادە نەکردووە."
             : message || "دیاریکردنی کاپتن سەرکەوتوو نەبوو.",

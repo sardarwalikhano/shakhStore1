@@ -1429,6 +1429,27 @@ export type Database = {
       }
     }
     Functions: {
+      admin_list_captain_scopes_v1: {
+        Args: never
+        Returns: {
+          email: string | null
+          email_confirmed: boolean
+          full_name: string
+          is_active: boolean
+          scope_type: string
+          user_id: string
+          zone_ids: string[]
+        }[]
+      }
+      admin_manage_captain_scope_v1: {
+        Args: {
+          p_captain_user_id: string
+          p_is_active: boolean
+          p_scope_type: string
+          p_zone_ids: string[]
+        }
+        Returns: Json
+      }
       admin_assign_delivery_captain_v1: {
         Args: { p_assignment_id: string; p_captain_user_id: string }
         Returns: Json
