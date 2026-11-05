@@ -301,9 +301,9 @@ async function createDraftProductForPost(
   } catch {
     return { ok: false, message: "تکایە وێنەی بەرهەم بار بکە؛ لینکی وێنە دەبێت HTTPS بێت." };
   }
-  const { data: category, error: categoryError } = await supabase.from("catalog_categories")
+  const { data: activeCategory, error: categoryError } = await supabase.from("catalog_categories")
     .select("id").eq("id", categoryId).eq("is_active", true).maybeSingle();
-  if (categoryError || !category) return { ok: false, message: "پۆلی بەرهەم چالاک نییە؛ پۆلێکی تر هەڵبژێرە." };
+  if (categoryError || !activeCategory) return { ok: false, message: "پۆلی بەرهەم چالاک نییە؛ پۆلێکی تر هەڵبژێرە." };
   const fractional = unit === "kg" || unit === "liter";
   const { data: product, error: insertError } = await supabase.from("products").insert({
     store_id: storeId,
