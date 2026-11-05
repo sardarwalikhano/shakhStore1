@@ -13,6 +13,8 @@ const accountLabels: Record<string, string> = {
   merchant: "جزدانی دوکاندار",
   captain: "جزدانی کاپتن",
   platform: "هەژماری پلاتفۆرم",
+  cash_clearing: "پارەی نەقدی لای کاپتن (Cash Clearing)",
+  escrow: "هەژماری پارێزراوی پاداشت (Escrow)",
 };
 
 const ruleLabels: Record<string, string> = {
