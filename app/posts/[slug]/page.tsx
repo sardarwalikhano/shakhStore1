@@ -17,7 +17,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
   const [{ data: post, error }, { data: { user } }] = await Promise.all([
     supabase.from("posts")
-      .select("title,slug,excerpt,body,category,cover_image_url,published_at,store_id,product_id,author_user_id")
+      .select("id,title,slug,excerpt,body,category,cover_image_url,published_at,store_id,product_id,author_user_id")
       .eq("slug", slug)
       .eq("status", "published")
       .not("published_at", "is", null)
@@ -89,7 +89,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
           <p className="post-article-excerpt">{post.excerpt}</p>
           <div className="post-article-body">{post.body}</div>
 
-          {shareReward && (
+          {shareReward && shareReward.reward_amount_iqd !== null && shareReward.remaining_claims !== null && (
             <section className="post-share-reward-card">
               {isOwnPost ? (
                 <>
