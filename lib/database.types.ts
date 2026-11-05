@@ -1507,6 +1507,7 @@ export type Database = {
           slug?: string
           status?: string
           updated_at?: string
+          wallet_suspended_at?: string | null
         }
         Relationships: []
       }
