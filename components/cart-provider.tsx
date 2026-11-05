@@ -21,6 +21,7 @@ export type CartProductInput = {
   minOrderQuantity: number;
   maxOrderQuantity: number | null;
   quantityStep: number;
+  shareCode?: string | null;
 };
 export type CartLine = CartProductInput & { quantity: number };
 type CartContextValue = {
