@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { MapPinned, Truck } from "lucide-react";
 import { DashboardFrame } from "@/components/dashboard-frame";
 import { OrderWorkflowAction } from "@/components/order-workflow-action";
+import { CodCollectionAction } from "@/components/cod-collection-action";
+import { getCodDeliveryFeeShare } from "@/lib/cod-allocation";
 import { DeliveryAssignmentAction, type CaptainOption } from "@/components/delivery-assignment-action";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -63,7 +65,7 @@ export default async function DeliveriesPage() {
   }
   const assignmentQuery = supabase
     .from("delivery_assignments")
-    .select("id, order_id, order_store_id, status, assigned_at, accepted_at, picked_up_at, delivered_at, created_at")
+    .select("id, order_id, order_store_id, status, assigned_at, accepted_at, picked_up_at, delivered_at, created_at, cod_collected_at, cod_collected_iqd")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -79,14 +81,18 @@ export default async function DeliveriesPage() {
     order_number: string;
     address_snapshot: unknown;
     total_iqd: number;
+    items_subtotal_iqd: number;
+    delivery_fee_iqd: number;
+    payment_method: string;
+    payment_status: string;
     currency: string;
   }>();
-  let storeMap = new Map<string, { name: string; status: string }>();
+  let storeMap = new Map<string, { name: string; status: string; order_id: string; items_subtotal_iqd: number; created_at: string }>();
 
   if (!queryError && orderIds.length > 0) {
     const { data: orders, error: ordersError } = await supabase
       .from("orders")
-      .select("id, order_number, address_snapshot, total_iqd, currency")
+      .select("id, order_number, address_snapshot, total_iqd, items_subtotal_iqd, delivery_fee_iqd, payment_method, payment_status, currency")
       .in("id", orderIds);
 
     if (ordersError) queryError = ordersError.message;
@@ -95,6 +101,10 @@ export default async function DeliveriesPage() {
         order_number: order.order_number,
         address_snapshot: order.address_snapshot,
         total_iqd: order.total_iqd,
+        items_subtotal_iqd: order.items_subtotal_iqd,
+        delivery_fee_iqd: order.delivery_fee_iqd,
+        payment_method: order.payment_method,
+        payment_status: order.payment_status,
         currency: order.currency,
       }]));
     }
@@ -103,11 +113,11 @@ export default async function DeliveriesPage() {
   if (!queryError && orderStoreIds.length > 0) {
     const { data: stores, error: storesError } = await supabase
       .from("order_stores")
-      .select("id, store_name_snapshot, status")
+      .select("id, order_id, store_name_snapshot, status, items_subtotal_iqd, created_at")
       .in("id", orderStoreIds);
 
     if (storesError) queryError = storesError.message;
-    else storeMap = new Map((stores ?? []).map((store) => [store.id, { name: store.store_name_snapshot, status: store.status }]));
+    else storeMap = new Map((stores ?? []).map((store) => [store.id, { name: store.store_name_snapshot, status: store.status, order_id: store.order_id, items_subtotal_iqd: store.items_subtotal_iqd, created_at: store.created_at }]));
   }
 
   const name = typeof user.user_metadata?.full_name === "string"
@@ -144,6 +154,22 @@ export default async function DeliveriesPage() {
             const recipient = textValue(address.recipient_name);
             const phone = textValue(address.phone);
             const notes = textValue(address.delivery_notes);
+            const orderConsignments = [...storeMap.entries()]
+              .filter(([, store]) => store.order_id === assignment.order_id)
+              .map(([id, store]) => ({
+                id,
+                createdAt: store.created_at,
+                itemsSubtotalIqd: store.items_subtotal_iqd,
+              }));
+            const deliveryFeeShare = order
+              ? getCodDeliveryFeeShare(
+                  order.delivery_fee_iqd,
+                  order.items_subtotal_iqd,
+                  orderConsignments,
+                  assignment.order_store_id,
+                ) ?? 0
+              : 0;
+            const expectedCodCash = (storeMap.get(assignment.order_store_id)?.items_subtotal_iqd ?? 0) + deliveryFeeShare;
 
             return (
               <article className="dashboard-panel" key={assignment.id}>
@@ -172,6 +198,14 @@ export default async function DeliveriesPage() {
                     {notes && <p className="muted">تێبینی: {notes}</p>}
                   </div>
                 </div>
+                {role === "captain" && order?.payment_method === "cash_on_delivery" && assignment.status === "delivered" && (
+                  <CodCollectionAction
+                    assignmentId={assignment.id}
+                    expectedCashIqd={expectedCodCash}
+                    collectedAt={assignment.cod_collected_at}
+                    collectedAmountIqd={assignment.cod_collected_iqd}
+                  />
+                )}
                 <div className="dashboard-quick-links">
                   <span>دیاریکراو: {formatTimestamp(assignment.assigned_at)}</span>
                   <span>پەسەندکراو: {formatTimestamp(assignment.accepted_at)}</span>
