@@ -55,7 +55,7 @@ export function CheckoutForm({
       if (!idempotencyKey.current) idempotencyKey.current = window.crypto.randomUUID();
       const { data, error: orderError } = await supabase.rpc("create_order_v1", {
         p_address_id: selectedAddress.id,
-        p_items: items.map(item=>({product_id:item.productId,quantity:item.quantity})),
+        p_items: items.map(item=>({product_id:item.productId,quantity:item.quantity,referral_code:item.shareCode ?? null})),
         p_idempotency_key: idempotencyKey.current,
         p_customer_note: note.trim() || undefined,
         p_payment_method: "cash_on_delivery",
