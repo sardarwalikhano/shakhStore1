@@ -125,7 +125,13 @@ Use the Supabase **Reset Password** email template with a link using `{{ .Confir
 - Admins and super admins can list verified, non-banned accounts with trusted Auth `app_metadata.role = captain`, then assign one only after the store-order is ready for pickup. The directory is exposed through an admin-checked RPC; it does not expose the Auth user list to customers or merchants.
 - Captains can advance only their own assignment: `assigned → accepted → picked_up → on_the_way → delivered`. Pickup requires the merchant's ready-for-pickup state.
 - Every transition is checked and written in a database-side SECURITY DEFINER RPC with ownership/role checks and an append-only order status event. Parent order status is recalculated from its store-order rows.
-- Cancellation, refund, cash-on-delivery settlement, and wallet/commission settlement remain disabled pending separately approved business rules.
+- Checkout now snapshots the active merchant commission rule on each order item. The default rule is 350 IQD per kg; commission is capped at the line value and excluded for non-weighted items under a per-kg rule.
+- Captains can confirm COD only after their own delivery assignment reaches `delivered`. The database calculates each store consignment's share of the order-level delivery fee, validates the exact cash amount, and posts a balanced, idempotent wallet ledger transaction.
+- COD cash collection debits a dedicated debit-normal `cash_clearing` account; merchant net proceeds, captain delivery earnings, and platform commission are credited separately. Existing `escrow` accounts for post-share rewards remain supported and are not reclassified.
+- The order is marked paid only after every delivery assignment has a recorded COD collection. Multi-store delivery-fee rounding remainder is assigned to the final consignment.
+- `/dashboard/wallets` provides role-scoped wallet balances and ledger history. Admin roles can also inspect active commission rules; this page is read-only.
+- Customer cancellation is available only for the complete COD order and only before any delivery assignment is picked up. The database RPC locks the order and all consignments, rejects pickup/delivery/COD collection, restores finite product stock atomically, cancels every store-order and delivery assignment, and appends status events. It does not create a refund or wallet ledger entry.
+- Refunds after pickup or COD collection, merchant payouts, and cash remittance reconciliation remain disabled pending separately approved business rules. COD collection records receipt and accrues wallet balances; it does not itself transfer physical cash or trigger a bank payout.
 
 
 ## Customer order tracking
